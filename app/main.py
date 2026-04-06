@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.search import router as search_router
+from app.api.rag_search import router as rag_router
 from app.db.database import SessionLocal, engine
 from app.db.base import Base
 from app.db.seed import seed_database
@@ -18,6 +19,7 @@ app.add_middleware(
 )
 
 app.include_router(search_router)
+app.include_router(rag_router)
 
 @app.on_event("startup")
 def startup():
