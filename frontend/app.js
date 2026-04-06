@@ -11,7 +11,7 @@ async function search() {
     box.innerHTML = "<p>Загрузка...</p>";
 
     try {
-        const res = await fetch(`http://127.0.0.1:8000/search?query=${encodeURIComponent(query)}`);
+        const res = await fetch(`http://127.0.0.1:8000/rag/search?query=${encodeURIComponent(query)}`);
         const data = await res.json();
 
         console.log(data);
@@ -28,11 +28,8 @@ async function search() {
             div.className = "card";
 
             div.innerHTML = `
-                <h3>${item.name}</h3>
-                <p>🔥 Calories: ${item.calories}</p>
-                <p>💪 Protein: ${item.protein}</p>
-                <p>🥑 Fat: ${item.fat}</p>
-                <p>🍞 Carbs: ${item.carbs}</p>
+                <h3>${item.restaurant}</h3>
+                <p>📄 ${item.raw_text.substring(0, 200)}...</p>
                 <p>⚡ Score: ${item.score}</p>
             `;
 

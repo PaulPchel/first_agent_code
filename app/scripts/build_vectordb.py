@@ -1,5 +1,6 @@
-"""Download menu photos from S3, OCR them, embed with OpenAI, store in ChromaDB."""
+"""Download menu photos from S3, extract text via GPT-4o Vision, embed with OpenAI, store in ChromaDB."""
 
+import base64
 import os
 import re
 import sys
@@ -12,8 +13,6 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from PIL import Image
 from pillow_heif import register_heif_opener
-
-import pytesseract
 
 load_dotenv()
 
@@ -54,18 +53,42 @@ def download_images_from_s3(bucket: str, prefix: str, dest: str) -> list[dict]:
     return items
 
 
-def ocr_image(path: str) -> str:
-    """Open an image (HEIC/PNG/JPG) and extract text via Tesseract."""
+def extract_text_vision(path: str, client: OpenAI) -> str:
+    """Extract text from a menu photo using GPT-4o Vision."""
     img = Image.open(path)
     if img.mode != "RGB":
         img = img.convert("RGB")
 
     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
         img.save(tmp.name, format="PNG")
-        text = pytesseract.image_to_string(tmp.name)
+        with open(tmp.name, "rb") as f:
+            b64 = base64.b64encode(f.read()).decode("utf-8")
         os.unlink(tmp.name)
 
-    return text.strip()
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": (
+                        "Extract ALL text from this restaurant menu photo. "
+                        "Return only the extracted text, preserving the structure "
+                        "(dish names, prices, descriptions, nutritional info). "
+                        "The menu may be in Russian."
+                    ),
+                },
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/png;base64,{b64}"},
+                },
+            ],
+        }],
+        max_tokens=2000,
+    )
+
+    return response.choices[0].message.content.strip()
 
 
 def embed_texts(client: OpenAI, texts: list[str]) -> list[list[float]]:
@@ -107,7 +130,7 @@ def build() -> None:
 
         for item in items:
             meta = parse_filename(item["s3_key"])
-            text = ocr_image(item["local_path"])
+            text = extract_text_vision(item["local_path"], openai_client)
 
             if len(text) < MIN_TEXT_LENGTH:
                 print(f"  WARNING low OCR text ({len(text)} chars): {item['s3_key']}")

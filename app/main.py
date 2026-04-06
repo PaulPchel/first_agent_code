@@ -1,10 +1,16 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from app.api.search import router as search_router
 from app.api.rag_search import router as rag_router
 from app.db.database import SessionLocal, engine
 from app.db.base import Base
 from app.db.seed import seed_database
+
+FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend")
 
 Base.metadata.create_all(bind=engine)
 
@@ -29,4 +35,6 @@ def startup():
 
 @app.get("/")
 def root():
-    return {"message": "API is running"}
+    return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
+
+app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
