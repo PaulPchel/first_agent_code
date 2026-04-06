@@ -1,0 +1,45 @@
+[
+  {
+    "name": "chicken burger",
+    "calories": 300,
+    "protein": 20,
+    "fat": 15,
+    "carbs": 25
+  },
+  {
+    "name": "cheeseburger",
+    "calories": 280,
+    "protein": 18,
+    "fat": 14,
+    "carbs": 26
+  },
+  {
+    "name": "caesar salad",
+    "calories": 220,
+    "protein": 15,
+    "fat": 10,
+    "carbs": 12
+  },
+  {
+    "name": "fries",
+    "calories": 320,
+    "protein": 4,
+    "fat": 15,
+    "carbs": 40
+  },
+  {
+  "name": "pizza",
+  "calories": 270,
+  "protein": 11,
+  "fat": 10,
+  "carbs": 33
+  },
+  { 
+  "name": "sushi",
+  "calories": 150,
+  "protein": 6,
+  "fat": 2,
+  "carbs": 28
+  }
+   
+]
