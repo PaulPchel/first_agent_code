@@ -4,13 +4,18 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+
 from app.api.search import router as search_router
 from app.api.rag_search import router as rag_router
+from app.api.user import router as user_router
+
 from app.db.database import SessionLocal, engine
 from app.db.base import Base
 from app.db.seed import seed_database
 
-FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+FRONTEND_DIR = os.path.join(BASE_DIR, "..", "frontend")
+
 
 Base.metadata.create_all(bind=engine)
 
@@ -24,8 +29,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
+
 app.include_router(search_router)
 app.include_router(rag_router)
+app.include_router(user_router)
 
 @app.on_event("startup")
 def startup():
@@ -36,5 +44,3 @@ def startup():
 @app.get("/")
 def root():
     return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
-
-app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
