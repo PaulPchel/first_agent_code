@@ -1,16 +1,31 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
+    <meta charset="UTF-8">
     <title>Food Agent</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
 <div class="container">
-    <h1>🍔 Food Agent</h1>
+    <h1>🍔 Food Nutrition Agent</h1>
 
-    <input id="query" type="text" placeholder="Например: куриный бургер">
-    <button id="searchBtn">Поиск</button>
+    <div class="block">
+        <h3>1️⃣ Выбери ресторан</h3>
+        <input id="restaurant" placeholder="McDonalds">
+        <button onclick="setRestaurant()">Выбрать</button>
+    </div>
+
+    <div class="block">
+        <h3>2️⃣ Выбери блюдо</h3>
+        <input id="meal" placeholder="Chicken Burger">
+        <button onclick="setMeal()">Выбрать</button>
+    </div>
+
+    <div class="block">
+        <h3>3️⃣ Результат</h3>
+        <button class="main-btn" onclick="getNutrition()">Показать калории</button>
+    </div>
 
     <div id="results"></div>
 </div>
