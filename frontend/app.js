@@ -1,57 +1,43 @@
-const user_id = 1;
+document.getElementById("searchBtn").addEventListener("click", search);
 
-async function setRestaurant() {
-    const restaurant = document.getElementById("restaurant").value;
+async function search() {
+    const query = document.getElementById("query").value.trim();
 
-    const res = await fetch(`/user/restaurant?user_id=${user_id}&restaurant=${restaurant}`, {
-        method: "POST"
-    });
-
-    const data = await res.json();
-
-    if (data.error) {
-        alert(data.error);
-        return;
-    }
-
-    alert("✅ Ресторан выбран");
-}
-
-async function setMeal() {
-    const meal = document.getElementById("meal").value;
-
-    const res = await fetch(`/user/meal?user_id=${user_id}&meal=${meal}`, {
-        method: "POST"
-    });
-
-    const data = await res.json();
-
-    if (data.error) {
-        alert(data.error);
-        return;
-    }
-
-    alert("✅ Блюдо выбрано");
-}
-
-async function getNutrition() {
-    const res = await fetch(`/user/nutrition?user_id=${user_id}`);
-    const data = await res.json();
+    if (!query) return;
 
     const box = document.getElementById("results");
 
-    if (data.error) {
-        box.innerHTML = `<p>${data.error}</p>`;
-        return;
-    }
+    // 👉 показываем загрузку
+    box.innerHTML = "<p>Загрузка...</p>";
 
-    box.innerHTML = `
-        <div class="card">
-            <h3>${data.name}</h3>
-            <p>🔥 Calories: ${data.calories}</p>
-            <p>💪 Protein: ${data.protein}</p>
-            <p>🥑 Fat: ${data.fat}</p>
-            <p>🍞 Carbs: ${data.carbs}</p>
-        </div>
-    `;
+    try {
+        const res = await fetch(`http://127.0.0.1:8000/rag/search?query=${encodeURIComponent(query)}`);
+        const data = await res.json();
+
+        console.log(data);
+
+        box.innerHTML = "";
+
+        if (!data.results || data.results.length === 0) {
+            box.innerHTML = "<p>Ничего не найдено</p>";
+            return;
+        }
+
+        data.results.forEach(item => {
+            const div = document.createElement("div");
+            div.className = "card";
+
+            div.innerHTML = `
+                <h3>${item.restaurant}</h3>
+                <p>📄 ${item.raw_text.substring(0, 200)}...</p>
+                <p>⚡ Score: ${item.score}</p>
+            `;
+
+            box.appendChild(div);
+        });
+
+    } catch (error) {
+        console.error(error);
+        box.innerHTML = "<p>Ошибка подключения к серверу</p>";
+    }
 }
