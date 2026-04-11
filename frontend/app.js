@@ -7,11 +7,10 @@ async function search() {
 
     const box = document.getElementById("results");
 
-    // 👉 показываем загрузку
     box.innerHTML = "<p>Загрузка...</p>";
 
     try {
-        const res = await fetch(`http://127.0.0.1:8000/rag/search?query=${encodeURIComponent(query)}`);
+        const res = await fetch(`/dishes/search?query=${encodeURIComponent(query)}`);
         const data = await res.json();
 
         console.log(data);
@@ -27,10 +26,19 @@ async function search() {
             const div = document.createElement("div");
             div.className = "card";
 
+            const nutrition = [
+                item.calories != null ? `${item.calories} ккал` : null,
+                item.protein != null ? `Б: ${item.protein}г` : null,
+                item.fat != null ? `Ж: ${item.fat}г` : null,
+                item.carbs != null ? `У: ${item.carbs}г` : null,
+            ].filter(Boolean).join(" · ");
+
             div.innerHTML = `
-                <h3>${item.restaurant}</h3>
-                <p>📄 ${item.raw_text.substring(0, 200)}...</p>
-                <p>⚡ Score: ${item.score}</p>
+                <h3>${item.dish_name}</h3>
+                <p class="restaurant">${item.restaurant}</p>
+                ${item.description ? `<p class="description">${item.description}</p>` : ""}
+                ${nutrition ? `<p class="nutrition">${nutrition}</p>` : ""}
+                ${item.price != null ? `<p class="price">${item.price} ₽</p>` : ""}
             `;
 
             box.appendChild(div);

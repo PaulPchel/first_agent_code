@@ -16,9 +16,9 @@ def _read_frontend(filename: str) -> str:
 
 
 class TestAppJsSanity:
-    def test_calls_real_rag_search_endpoint(self):
+    def test_calls_real_dishes_search_endpoint(self):
         js = _read_frontend("app.js")
-        assert "/rag/search" in js, "app.js must call the /rag/search API"
+        assert "/dishes/search" in js, "app.js must call the /dishes/search API"
 
     def test_uses_fetch(self):
         js = _read_frontend("app.js")

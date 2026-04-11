@@ -34,6 +34,35 @@ button {
     background: #222;
     padding: 15px;
     margin: 10px auto;
-    width: 300px;
+    width: 340px;
     border-radius: 10px;
+    text-align: left;
+}
+
+.card h3 {
+    margin: 0 0 4px;
+}
+
+.card .restaurant {
+    color: #ff6600;
+    margin: 0 0 8px;
+    font-size: 0.85em;
+}
+
+.card .description {
+    color: #aaa;
+    font-size: 0.85em;
+    margin: 0 0 8px;
+}
+
+.card .nutrition {
+    color: #8f8;
+    font-size: 0.9em;
+    margin: 0 0 4px;
+}
+
+.card .price {
+    color: #fff;
+    font-weight: bold;
+    margin: 4px 0 0;
 }
