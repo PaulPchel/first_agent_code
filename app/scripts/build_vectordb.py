@@ -18,7 +18,6 @@ load_dotenv()
 
 register_heif_opener()
 
-CHROMA_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "chroma_db")
 COLLECTION_NAME = os.getenv("CHROMA_COLLECTION_NAME")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL")
 IMAGE_EXTENSIONS = {".heic", ".png", ".jpg", ".jpeg"}
@@ -111,7 +110,11 @@ def build() -> None:
 
     openai_client = OpenAI(api_key=openai_key)
 
-    chroma_client = chromadb.PersistentClient(path=os.path.abspath(CHROMA_PATH))
+    chroma_client = chromadb.CloudClient(
+        tenant=os.getenv("CHROMA_CLOUD_TENANT"),
+        database=os.getenv("CHROMA_CLOUD_DATABASE"),
+        api_key=os.getenv("CHROMA_CLOUD_API_KEY"),
+    )
     collection = chroma_client.get_or_create_collection(
         name=COLLECTION_NAME,
         metadata={"hnsw:space": "cosine"},

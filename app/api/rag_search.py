@@ -9,7 +9,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-CHROMA_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "chroma_db")
 COLLECTION_NAME = os.getenv("CHROMA_COLLECTION_NAME")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL")
 
@@ -22,7 +21,11 @@ _openai_client = None
 def _get_chroma_collection():
     global _chroma_client
     if _chroma_client is None:
-        _chroma_client = chromadb.PersistentClient(path=os.path.abspath(CHROMA_PATH))
+        _chroma_client = chromadb.CloudClient(
+            tenant=os.getenv("CHROMA_CLOUD_TENANT"),
+            database=os.getenv("CHROMA_CLOUD_DATABASE"),
+            api_key=os.getenv("CHROMA_CLOUD_API_KEY"),
+        )
     return _chroma_client.get_collection(COLLECTION_NAME)
 
 
