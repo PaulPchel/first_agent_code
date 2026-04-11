@@ -5,7 +5,6 @@ from sqlalchemy.pool import StaticPool
 from fastapi.testclient import TestClient
 
 from app.db.base import Base
-from app.db.models import Food
 from app.db.seed import seed_database
 
 
