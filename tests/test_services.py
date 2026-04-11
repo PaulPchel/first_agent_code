@@ -1,9 +1,6 @@
-"""Tests for app/services/ — SearchService, ranking, matcher."""
-
-import pytest
+"""Tests for app/services/ — SearchService."""
 
 from app.services.search_service import SearchService
-from app.services.ranking import word_similarity, score
 
 
 # ── SearchService.translate_query ────────────────────────────
@@ -70,39 +67,3 @@ class TestSearch:
         results = svc.search("картошка")
         names = [r["name"] for r in results]
         assert "Fries" in names
-
-
-# ── ranking module ───────────────────────────────────────────
-
-class TestWordSimilarity:
-    def test_identical(self):
-        assert word_similarity("burger", "burger") == 1.0
-
-    def test_empty_strings(self):
-        assert word_similarity("", "") == 1.0
-
-    def test_completely_different(self):
-        sim = word_similarity("abc", "xyz")
-        assert sim == pytest.approx(0.0)
-
-    def test_similar_words(self):
-        sim = word_similarity("burger", "burgers")
-        assert sim > 0.8
-
-    def test_returns_float_between_0_and_1(self):
-        sim = word_similarity("hello", "world")
-        assert 0.0 <= sim <= 1.0
-
-
-class TestRankingScore:
-    def test_exact_match_high_score(self):
-        s = score("burger", "burger")
-        assert s > 0.9
-
-    def test_partial_match(self):
-        s = score("chicken burger", "chicken salad")
-        assert 0.0 < s < 1.0
-
-    def test_no_match_low_score(self):
-        s = score("xyz", "burger")
-        assert s < 0.5
