@@ -9,3 +9,5 @@ openai
 pillow-heif
 pytesseract
 Pillow
+pytest
+httpx
