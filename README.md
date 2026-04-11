@@ -8,17 +8,36 @@ The app has two search modes:
 
 ## Setup
 
+Requires **Python 3.12+**. The setup script creates a virtual environment, installs
+dependencies, and prepares the `.env` config file:
+
 ```bash
 git clone https://github.com/PaulPchel/first_agent_code.git
 cd first_agent_code
-pip install -r requirements.txt
+./setup.sh
+```
 
-cp .env.example .env   # then fill in OPENAI_API_KEY, AWS credentials, etc.
+Then activate the environment and start the server:
 
+```bash
+source .venv/bin/activate
 uvicorn app.main:app --reload
 ```
 
 Open http://127.0.0.1:8000 in your browser.
+
+<details>
+<summary>Manual setup (without setup.sh)</summary>
+
+```bash
+python3.12 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env   # then fill in OPENAI_API_KEY, AWS credentials, etc.
+uvicorn app.main:app --reload
+```
+
+</details>
 
 ## Testing
 
