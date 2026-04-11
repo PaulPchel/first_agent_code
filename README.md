@@ -2,9 +2,10 @@
 
 Short test sprint to validate a flow where users get **calorie and macro (KBZhU: calories, protein, fat, carbs)** estimates for restaurant dishes, backed by structured data and simple UX.
 
-The app has two search modes:
-- **Keyword search** (`/search`) — matches dishes in SQLite with Russian-to-English translation
-- **RAG search** (`/rag/search`) — embeds the query with OpenAI, searches menu photos via ChromaDB
+The app has three search endpoints:
+- **Dish search** (`/dishes/search`) — searches structured dish data (name, restaurant, nutrition) extracted from menu photos
+- **Keyword search** (`/search`) — matches seed dishes with Russian-to-English translation
+- **RAG search** (`/rag/search`) — embeds the query with OpenAI, searches menu text via Chroma Cloud
 
 ## Setup
 
@@ -16,6 +17,11 @@ git clone https://github.com/PaulPchel/first_agent_code.git
 cd first_agent_code
 ./setup.sh
 ```
+
+Fill in your `.env` with the shared credentials (ask the team):
+- `DATABASE_URL` — Supabase Postgres connection string
+- `OPENAI_API_KEY` — OpenAI API key
+- `CHROMA_CLOUD_*` — Chroma Cloud tenant, database, and API key
 
 Then activate the environment and start the server:
 
@@ -33,7 +39,7 @@ Open http://127.0.0.1:8000 in your browser.
 python3.12 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env   # then fill in OPENAI_API_KEY, AWS credentials, etc.
+cp .env.example .env   # then fill in credentials
 uvicorn app.main:app --reload
 ```
 
@@ -49,6 +55,7 @@ python3 -m pytest tests/ -v
 
 | Test file | What it covers |
 |-----------|---------------|
+| `test_dishes.py` | Dish model, `GET /dishes/search` endpoint |
 | `test_services.py` | Search service, translation |
 | `test_db.py` | Food model, seed data idempotency |
 | `test_api_search.py` | `GET /search` endpoint |
@@ -90,7 +97,7 @@ flowchart LR
 
 ### Database
 
-Central store: **restaurants**, **menu items**, and **KBZhU** (nutritional fields) so the product can answer queries from structured data.
+**Supabase Postgres** — stores restaurants, menu items, and KBZhU (nutritional fields) so the product can answer queries from structured data. All contributors share the same cloud database — no local setup needed.
 
 ### User interface
 

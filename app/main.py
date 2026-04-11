@@ -6,6 +6,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from app.api.search import router as search_router
 from app.api.rag_search import router as rag_router
+from app.api.dishes import router as dishes_router
 from app.db.database import SessionLocal, engine
 from app.db.base import Base
 from app.db.seed import seed_database
@@ -26,6 +27,7 @@ app.add_middleware(
 
 app.include_router(search_router)
 app.include_router(rag_router)
+app.include_router(dishes_router)
 
 @app.on_event("startup")
 def startup():
