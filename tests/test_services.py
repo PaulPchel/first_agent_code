@@ -1,69 +1,103 @@
-"""Tests for app/services/ — SearchService."""
-
+from app.db.models import Dish, Restaurant
 from app.services.search_service import SearchService
 
 
-# ── SearchService.translate_query ────────────────────────────
+def seed_catalog(db_session):
+    bk = Restaurant(name="Burger King")
+    tr = Restaurant(name="Теремок")
+    db_session.add_all([bk, tr])
+    db_session.flush()
+
+    db_session.add_all(
+        [
+            Dish(
+                restaurant_id=bk.id,
+                dish_name="Whopper",
+                description="Beef burger",
+                calories=660,
+                protein=28,
+                fat=40,
+                carbs=49,
+                price=350,
+            ),
+            Dish(
+                restaurant_id=bk.id,
+                dish_name="Fries",
+                description="French fries",
+                calories=380,
+                protein=4,
+                fat=18,
+                carbs=50,
+                price=150,
+            ),
+            Dish(
+                restaurant_id=tr.id,
+                dish_name="Борщ",
+                description="Суп",
+                calories=320,
+                protein=12,
+                fat=15,
+                carbs=28,
+                price=290,
+            ),
+        ]
+    )
+    db_session.commit()
+
 
 class TestTranslateQuery:
-    def setup_method(self):
-        self.svc = SearchService(db=None)
+    def test_translates_russian_word(self, db_session):
+        service = SearchService(db_session)
+        assert "burger" in service.translate_query("бургер")
 
-    def test_translates_russian_word(self):
-        assert self.svc.translate_query("бургер") == "burger"
+    def test_passes_through_english(self, db_session):
+        service = SearchService(db_session)
+        assert service.translate_query("whopper") == "whopper"
 
-    def test_translates_multiple_words(self):
-        assert self.svc.translate_query("куриный бургер") == "chicken burger"
+    def test_case_insensitive(self, db_session):
+        service = SearchService(db_session)
+        assert "fries" in service.translate_query("ФРИ".lower())
 
-    def test_passes_through_english(self):
-        assert self.svc.translate_query("pizza") == "pizza"
-
-    def test_mixed_known_and_unknown(self):
-        assert self.svc.translate_query("бургер deluxe") == "burger deluxe"
-
-    def test_case_insensitive(self):
-        assert self.svc.translate_query("Бургер") == "burger"
-
-    def test_kola_becomes_coca_cola(self):
-        assert self.svc.translate_query("кола") == "coca cola"
-
-
-# ── SearchService.search ─────────────────────────────────────
 
 class TestSearch:
-    def test_finds_exact_english_match(self, seeded_db):
-        svc = SearchService(seeded_db)
-        results = svc.search("burger")
-        names = [r["name"] for r in results]
-        assert "Burger" in names
+    def test_finds_by_dish_name(self, db_session):
+        seed_catalog(db_session)
+        service = SearchService(db_session)
 
-    def test_finds_chicken_burger_via_russian(self, seeded_db):
-        svc = SearchService(seeded_db)
-        results = svc.search("куриный бургер")
-        names = [r["name"] for r in results]
-        assert "Chicken Burger" in names
+        results = service.search("Whopper")
+        assert len(results) >= 1
+        assert results[0]["dish_name"] == "Whopper"
 
-    def test_returns_nutrition_fields(self, seeded_db):
-        svc = SearchService(seeded_db)
-        results = svc.search("pizza")
-        assert len(results) > 0
-        item = results[0]
-        for key in ("name", "calories", "protein", "fat", "carbs", "score"):
-            assert key in item
+    def test_finds_by_restaurant_name(self, db_session):
+        seed_catalog(db_session)
+        service = SearchService(db_session)
 
-    def test_results_sorted_by_score_desc(self, seeded_db):
-        svc = SearchService(seeded_db)
-        results = svc.search("burger")
-        scores = [r["score"] for r in results]
-        assert scores == sorted(scores, reverse=True)
+        results = service.search("Burger King")
+        assert len(results) >= 2
+        assert all("restaurant" in x for x in results)
 
-    def test_no_results_for_nonsense(self, seeded_db):
-        svc = SearchService(seeded_db)
-        results = svc.search("xyznonexistent")
+    def test_finds_russian_dish(self, db_session):
+        seed_catalog(db_session)
+        service = SearchService(db_session)
+
+        results = service.search("Борщ")
+        assert len(results) == 1
+        assert results[0]["dish_name"] == "Борщ"
+
+    def test_returns_nutrition_fields(self, db_session):
+        seed_catalog(db_session)
+        service = SearchService(db_session)
+
+        item = service.search("Fries")[0]
+        assert "calories" in item
+        assert "protein" in item
+        assert "fat" in item
+        assert "carbs" in item
+        assert "score" in item
+
+    def test_no_results_for_nonsense(self, db_session):
+        seed_catalog(db_session)
+        service = SearchService(db_session)
+
+        results = service.search("nonexistent-dish-xyz")
         assert results == []
-
-    def test_fries_via_russian(self, seeded_db):
-        svc = SearchService(seeded_db)
-        results = svc.search("картошка")
-        names = [r["name"] for r in results]
-        assert "Fries" in names

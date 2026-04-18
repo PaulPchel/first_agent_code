@@ -1,25 +1,67 @@
-"""Tests for the Dish model and GET /dishes/search endpoint."""
+"""Tests for the Dish model and GET /dishes endpoint."""
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.db.models import Dish
-from app.api.dishes import router as dishes_router, get_db
+from app.api.dishes import get_db, router as dishes_router
+from app.db.models import Dish, Restaurant
 
 
 @pytest.fixture()
 def dish_data(db_session):
-    """Seed a few Dish rows for testing."""
+    """Seed restaurants + dishes for testing."""
+    bk = Restaurant(name="Burger King")
+    tr = Restaurant(name="Теремок")
+    db_session.add_all([bk, tr])
+    db_session.flush()
+
     dishes = [
-        Dish(restaurant="Burger King", dish_name="Whopper", price=350, calories=660, protein=28, fat=40, carbs=49),
-        Dish(restaurant="Burger King", dish_name="Fries", price=150, calories=380, protein=4, fat=18, carbs=50),
-        Dish(restaurant="Теремок", dish_name="Борщ", price=290, calories=320, protein=12, fat=15, carbs=28),
-        Dish(restaurant="Теремок", dish_name="Блин с курицей", price=350, calories=450, protein=25, fat=20, carbs=35),
+        Dish(
+            restaurant_id=bk.id,
+            dish_name="Whopper",
+            description="Beef burger",
+            price=350,
+            calories=660,
+            protein=28,
+            fat=40,
+            carbs=49,
+        ),
+        Dish(
+            restaurant_id=bk.id,
+            dish_name="Fries",
+            description="French fries",
+            price=150,
+            calories=380,
+            protein=4,
+            fat=18,
+            carbs=50,
+        ),
+        Dish(
+            restaurant_id=tr.id,
+            dish_name="Борщ",
+            description="Суп",
+            price=290,
+            calories=320,
+            protein=12,
+            fat=15,
+            carbs=28,
+        ),
+        Dish(
+            restaurant_id=tr.id,
+            dish_name="Блин с курицей",
+            description="Блин",
+            price=350,
+            calories=450,
+            protein=25,
+            fat=20,
+            carbs=35,
+        ),
     ]
     db_session.add_all(dishes)
     db_session.commit()
-    return db_session
+
+    return {"db": db_session, "bk_id": bk.id, "tr_id": tr.id}
 
 
 @pytest.fixture()
@@ -29,7 +71,7 @@ def dishes_client(dish_data):
 
     def _override():
         try:
-            yield dish_data
+            yield dish_data["db"]
         finally:
             pass
 
@@ -39,17 +81,25 @@ def dishes_client(dish_data):
 
 class TestDishModel:
     def test_create_dish(self, db_session):
-        dish = Dish(restaurant="Test", dish_name="Soup", calories=200)
+        r = Restaurant(name="Test R")
+        db_session.add(r)
+        db_session.flush()
+
+        dish = Dish(restaurant_id=r.id, dish_name="Soup", calories=200)
         db_session.add(dish)
         db_session.commit()
 
         result = db_session.query(Dish).filter_by(dish_name="Soup").first()
         assert result is not None
-        assert result.restaurant == "Test"
+        assert result.restaurant_id == r.id
         assert result.calories == 200
 
     def test_nullable_fields(self, db_session):
-        dish = Dish(restaurant="R", dish_name="D")
+        r = Restaurant(name="R")
+        db_session.add(r)
+        db_session.flush()
+
+        dish = Dish(restaurant_id=r.id, dish_name="D")
         db_session.add(dish)
         db_session.commit()
 
@@ -59,54 +109,62 @@ class TestDishModel:
         assert result.price is None
 
 
-class TestDishesSearch:
-    def test_returns_200(self, dishes_client):
-        resp = dishes_client.get("/dishes/search", params={"query": "burger"})
+class TestDishesEndpoint:
+    def test_returns_200(self, dishes_client, dish_data):
+        resp = dishes_client.get("/dishes", params={"restaurant_id": dish_data["bk_id"]})
         assert resp.status_code == 200
 
-    def test_search_by_dish_name(self, dishes_client):
-        resp = dishes_client.get("/dishes/search", params={"query": "Whopper"})
+    def test_missing_restaurant_id_returns_422(self, dishes_client):
+        resp = dishes_client.get("/dishes")
+        assert resp.status_code == 422
+
+    def test_filter_by_restaurant(self, dishes_client, dish_data):
+        resp = dishes_client.get("/dishes", params={"restaurant_id": dish_data["bk_id"]})
+        data = resp.json()
+
+        assert data["restaurant_id"] == dish_data["bk_id"]
+        assert data["count"] == 2
+        assert all(item["restaurant_id"] == dish_data["bk_id"] for item in data["results"])
+
+    def test_search_by_query_within_restaurant(self, dishes_client, dish_data):
+        resp = dishes_client.get(
+            "/dishes",
+            params={"restaurant_id": dish_data["bk_id"], "query": "Whopper"},
+        )
         results = resp.json()["results"]
+
         assert len(results) == 1
         assert results[0]["dish_name"] == "Whopper"
 
-    def test_search_by_restaurant(self, dishes_client):
-        resp = dishes_client.get("/dishes/search", params={"query": "Теремок"})
-        results = resp.json()["results"]
-        assert len(results) == 2
-
-    def test_filter_by_restaurant(self, dishes_client):
-        resp = dishes_client.get("/dishes/search", params={"restaurant": "Burger King"})
-        results = resp.json()["results"]
-        assert len(results) == 2
-        assert all(r["restaurant"] == "Burger King" for r in results)
-
-    def test_combined_query_and_restaurant(self, dishes_client):
-        resp = dishes_client.get("/dishes/search", params={"query": "Fries", "restaurant": "Burger King"})
-        results = resp.json()["results"]
-        assert len(results) == 1
-        assert results[0]["dish_name"] == "Fries"
-
-    def test_case_insensitive(self, dishes_client):
-        resp = dishes_client.get("/dishes/search", params={"query": "whopper"})
+    def test_case_insensitive_query(self, dishes_client, dish_data):
+        resp = dishes_client.get(
+            "/dishes",
+            params={"restaurant_id": dish_data["bk_id"], "query": "whopper"},
+        )
         assert resp.json()["count"] == 1
 
-    def test_no_results(self, dishes_client):
-        resp = dishes_client.get("/dishes/search", params={"query": "nonexistent"})
+    def test_no_results(self, dishes_client, dish_data):
+        resp = dishes_client.get(
+            "/dishes",
+            params={"restaurant_id": dish_data["bk_id"], "query": "nonexistent"},
+        )
         assert resp.json()["count"] == 0
         assert resp.json()["results"] == []
 
-    def test_result_fields(self, dishes_client):
-        resp = dishes_client.get("/dishes/search", params={"query": "Борщ"})
+    def test_result_fields(self, dishes_client, dish_data):
+        resp = dishes_client.get("/dishes", params={"restaurant_id": dish_data["tr_id"], "query": "Борщ"})
         item = resp.json()["results"][0]
-        assert "restaurant" in item
+
+        assert "id" in item
+        assert "restaurant_id" in item
         assert "dish_name" in item
+        assert "description" in item
+        assert "price" in item
         assert "calories" in item
         assert "protein" in item
         assert "fat" in item
         assert "carbs" in item
-        assert "price" in item
 
-    def test_no_params_returns_all(self, dishes_client):
-        resp = dishes_client.get("/dishes/search")
-        assert resp.json()["count"] == 4
+    def test_no_query_returns_all_for_restaurant(self, dishes_client, dish_data):
+        resp = dishes_client.get("/dishes", params={"restaurant_id": dish_data["tr_id"]})
+        assert resp.json()["count"] == 2

@@ -1,19 +1,57 @@
-from app.db.models import Food
+from app.db.models import Dish, Restaurant
 
 def seed_database(db):
-    existing = db.query(Food).first()
-
-    if existing:
+    if db.query(Restaurant).first():
         return
 
-    foods = [
-        Food(name="Chicken Burger", calories=300, protein=20, fat=15, carbs=25),
-        Food(name="Burger", calories=250, protein=12, fat=10, carbs=30),
-        Food(name="Fries", calories=400, protein=4, fat=20, carbs=50),
-        Food(name="Coca Cola", calories=140, protein=0, fat=0, carbs=39),
-        Food(name="Salad", calories=120, protein=5, fat=3, carbs=10),
-        Food(name="Pizza", calories=500, protein=22, fat=18, carbs=60),
+    r1 = Restaurant(name="Burger King")
+    r2 = Restaurant(name="Теремок")
+
+    db.add_all([r1, r2])
+    db.flush()
+
+    dishes = [
+        Dish(
+            restaurant_id=r1.id,
+            dish_name="Whopper",
+            description="Beef burger",
+            price=350,
+            calories=660,
+            protein=28,
+            fat=40,
+            carbs=49,
+        ),
+        Dish(
+            restaurant_id=r1.id,
+            dish_name="Fries",
+            description="French fries",
+            price=150,
+            calories=380,
+            protein=4,
+            fat=18,
+            carbs=50,
+        ),
+        Dish(
+            restaurant_id=r2.id,
+            dish_name="Борщ",
+            description="Суп с говядиной",
+            price=290,
+            calories=320,
+            protein=12,
+            fat=15,
+            carbs=28,
+        ),
+        Dish(
+            restaurant_id=r2.id,
+            dish_name="Блин с курицей",
+            description="Блин с начинкой",
+            price=350,
+            calories=450,
+            protein=25,
+            fat=20,
+            carbs=35,
+        ),
     ]
 
-    db.add_all(foods)
+    db.add_all(dishes)
     db.commit()
