@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "Food Agent",
+    "slug": "food-agent",
+    "scheme": "food-agent",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#121212"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.foodagent.app"
+    },
+    "plugins": [
+      "expo-router"
+    ]
+  }
+}

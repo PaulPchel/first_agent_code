@@ -1,16 +1,59 @@
 # Restaurant Nutrition MVP
 
-Short test sprint to validate a flow where users get **calorie and macro (KBZhU: calories, protein, fat, carbs)** estimates for restaurant dishes, backed by structured data and simple UX.
+Users get **calorie and macro (KBZhU: calories, protein, fat, carbs)** estimates for restaurant dishes, backed by structured data extracted from menu photos.
 
-The app has three search endpoints:
-- **Dish search** (`/dishes/search`) — searches structured dish data (name, restaurant, nutrition) extracted from menu photos
-- **Keyword search** (`/search`) — matches seed dishes with Russian-to-English translation
-- **RAG search** (`/rag/search`) — embeds the query with OpenAI, searches menu text via Chroma Cloud
+The service consists of a **FastAPI backend** and a **React Native (Expo) mobile app** for iOS.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph client [Mobile App]
+    Expo["Expo iOS App\n(React Native)"]
+  end
+  subgraph backend [Backend]
+    API["FastAPI"]
+    DB[("Supabase\nPostgres")]
+    Chroma[("Chroma Cloud\nVector DB")]
+    OpenAI["OpenAI API"]
+  end
+  subgraph pipeline [Data Pipeline]
+    S3["S3\nMenu Photos"]
+    OCR["GPT-4o Vision\nOCR"]
+  end
+  Expo -->|REST API| API
+  API --> DB
+  API --> Chroma
+  API --> OpenAI
+  S3 --> OCR
+  OCR --> DB
+  OCR --> Chroma
+```
+
+### API endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /restaurants` | List restaurants (optional `?query=` filter) |
+| `GET /dishes` | List dishes for a restaurant (`?restaurant_id=`) |
+| `GET /dishes/search` | Quick search by dish name / restaurant |
+| `POST /user/restaurant` | Save user's restaurant selection |
+| `POST /user/dish` | Save user's dish selection |
+| `GET /user/result` | Get nutrition result for saved dish |
+| `GET /search` | Keyword search with Russian-to-English translation |
+| `GET /rag/search` | Semantic search over menu text via Chroma Cloud |
+
+## Prerequisites
+
+- **Python 3.12+** (backend)
+- **Node.js 20+** (mobile app)
+- An iPhone with **Expo Go** installed from the App Store (for testing)
 
 ## Setup
 
-Requires **Python 3.12+**. The setup script creates a virtual environment, installs
-dependencies, and prepares the `.env` config file:
+### Backend
+
+The setup script creates a virtual environment, installs dependencies, and prepares the `.env` config file:
 
 ```bash
 git clone https://github.com/PaulPchel/first_agent_code.git
@@ -23,15 +66,6 @@ Fill in your `.env` with the shared credentials (ask the team):
 - `OPENAI_API_KEY` — OpenAI API key
 - `CHROMA_CLOUD_*` — Chroma Cloud tenant, database, and API key
 
-Then activate the environment and start the server:
-
-```bash
-source .venv/bin/activate
-uvicorn app.main:app --reload
-```
-
-Open http://127.0.0.1:8000 in your browser.
-
 <details>
 <summary>Manual setup (without setup.sh)</summary>
 
@@ -40,21 +74,78 @@ python3.12 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env   # then fill in credentials
-uvicorn app.main:app --reload
 ```
 
 </details>
 
-## Testing
-
-All PRs to `main` are tested automatically via GitHub Actions. **Tests must pass before merging.**
+### Mobile app
 
 ```bash
+cd mobile
+npm install
+```
+
+## Running
+
+### 1. Start the backend
+
+Bind to `0.0.0.0` so the mobile app can reach it over your local network:
+
+```bash
+source .venv/bin/activate
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+### 2. Start the mobile app
+
+In a separate terminal:
+
+```bash
+cd mobile
+npx expo start
+```
+
+Scan the QR code with your iPhone camera to open the app in Expo Go. Your phone must be on the same Wi-Fi network as your Mac.
+
+**API base URL:** the mobile app connects to your Mac's local IP (configured in `mobile/services/api.ts`). If your IP changes, update the `API_BASE` value there.
+
+### Web frontend (legacy)
+
+The original web UI is still available at http://127.0.0.1:8000 when the backend is running. It lives in `frontend/` and is served by FastAPI.
+
+## Project structure
+
+```
+first_agent_code/
+├── app/                    # FastAPI backend
+│   ├── main.py             #   app entry point, router wiring, startup seed
+│   ├── api/                #   route handlers (dishes, search, rag)
+│   ├── db/                 #   SQLAlchemy models, engine, seed
+│   ├── services/           #   search service with translation
+│   └── scripts/            #   offline data pipeline (S3, OCR, vectorDB)
+├── mobile/                 # React Native (Expo) iOS app
+│   ├── app/                #   screens (Expo Router file-based routing)
+│   ├── components/         #   DishCard, NutritionGrid
+│   ├── services/           #   API client, user ID persistence
+│   └── constants/          #   theme colors
+├── frontend/               # legacy web frontend (vanilla HTML/CSS/JS)
+├── tests/                  # pytest test suite
+├── requirements.txt        # Python dependencies
+├── setup.sh                # one-command backend setup
+└── .github/workflows/      # CI (GitHub Actions)
+```
+
+## Testing
+
+All PRs to `main` are tested automatically via GitHub Actions. Tests must pass before merging.
+
+```bash
+source .venv/bin/activate
 python3 -m pytest tests/ -v
 ```
 
 | Test file | What it covers |
-|-----------|---------------|
+|-----------|----------------|
 | `test_dishes.py` | Dish model, `GET /dishes/search` endpoint |
 | `test_services.py` | Search service, translation |
 | `test_db.py` | Food model, seed data idempotency |
@@ -64,54 +155,13 @@ python3 -m pytest tests/ -v
 
 ### Rules for contributors
 
-1. **Run tests locally** before pushing: `python3 -m pytest tests/ -v`
-2. **Do not merge** if CI is red — fix the failing tests first
-3. **Add tests** when introducing new endpoints or changing search logic
-4. **Do not replace** real API calls in `app.js` with hardcoded or mocked data — the frontend sanity tests will catch it
-
-## Architecture
-
-```mermaid
-flowchart LR
-  subgraph inputs [Data collection]
-    APIs["APIs: 2GIS, Google Maps, Yandex Maps"]
-    Parser["Parser: open sources\ne.g. fat-secret.ru, healthy-diet.ru"]
-    Manual["Manual / test: Menu,\nCalorie menu"]
-  end
-  DB[("Database\nRestaurants + menu + KBZhU")]
-  UI["Interface\napp / Telegram bot"]
-  APIs --> DB
-  Parser --> DB
-  Manual --> DB
-  UI -->|request| DB
-  DB -->|answer| UI
-```
-
-### Data sources
-
-| Source | Role |
-|--------|------|
-| **APIs** | Pull venue and related data from **2GIS**, **Google Maps**, **Yandex Maps**. |
-| **Parser** | Scrape or normalize **open sources** (e.g. fat-secret.ru, healthy-diet.ru). |
-| **Manual (test)** | **Menu** and **calorie menu** datasets for the test phase until pipelines are stable. |
-
-### Database
-
-**Supabase Postgres** — stores restaurants, menu items, and KBZhU (nutritional fields) so the product can answer queries from structured data. All contributors share the same cloud database — no local setup needed.
-
-### User interface
-
-**Mobile app or Telegram bot** — users can send:
-
-- restaurant / dish text,
-- **photo of a receipt**,
-- **photo of a dish**.
-
-The client sends a **request** to the backend; the backend reads/writes the database and returns an **answer** (e.g. matched dish + nutrition).
+1. Run tests locally before pushing: `python3 -m pytest tests/ -v`
+2. Do not merge if CI is red — fix the failing tests first
+3. Add tests when introducing new endpoints or changing search logic
 
 ## Team
 
 | Person | Focus |
-|--------|--------|
-| **Artem** | Collect menus (Anya + friends); freelance (**FL**) task for menu collection; **estimate cost** of the test. |
-| **Pavel** | **Architecture & Git (PRs)**; choose **interface**; choose **database** and **data model**; research **Yandex API**; **parser** baseline design. |
+|--------|-------|
+| **Artem** | Collect menus (Anya + friends); freelance (FL) task for menu collection; estimate cost of the test. |
+| **Pavel** | Architecture & Git (PRs); choose interface; choose database and data model; research Yandex API; parser baseline design. |
