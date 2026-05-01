@@ -48,6 +48,7 @@ flowchart LR
 - **Python 3.12+** (backend)
 - **Node.js 20+** (mobile app)
 - An iPhone with **Expo Go** installed from the App Store (for testing)
+- **ngrok v3+** (only for tunnel mode — see [Restricted networks](#restricted-networks-vpn--tunnel))
 
 ## Setup
 
@@ -65,6 +66,7 @@ Fill in your `.env` with the shared credentials (ask the team):
 - `DATABASE_URL` — Supabase Postgres connection string
 - `OPENAI_API_KEY` — OpenAI API key
 - `CHROMA_CLOUD_*` — Chroma Cloud tenant, database, and API key
+- `NGROK_AUTHTOKEN` — ngrok auth token (only needed for tunnel mode, see below)
 
 <details>
 <summary>Manual setup (without setup.sh)</summary>
@@ -108,6 +110,58 @@ npx expo start
 Scan the QR code with your iPhone camera to open the app in Expo Go. Your phone must be on the same Wi-Fi network as your Mac.
 
 **API base URL:** the mobile app connects to your Mac's local IP (configured in `mobile/services/api.ts`). If your IP changes, update the `API_BASE` value there.
+
+### Restricted networks (VPN + tunnel)
+
+If your network blocks connections to Supabase (e.g. country-level restrictions), you need a VPN to reach the database. However, VPN usually breaks the Expo LAN connection between your Mac and iPhone.
+
+**Solution:** run a split VPN + ngrok tunnel.
+
+#### One-time setup
+
+1. **Install ngrok v3+**:
+
+```bash
+brew install ngrok
+```
+
+2. **Authenticate** (free account — sign up at [ngrok.com](https://ngrok.com)):
+
+```bash
+ngrok authtoken $NGROK_AUTHTOKEN
+```
+
+#### Running with tunnel
+
+Start your **VPN**, then:
+
+```bash
+# Terminal 1 — backend
+source .venv/bin/activate
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+# Terminal 2 — mobile app with tunnel (starts ngrok + Expo together)
+cd mobile
+npm run tunnel
+```
+
+The script starts ngrok, gets the public URL, and launches Expo with `EXPO_PACKAGER_PROXY_URL` set so the QR code points through the tunnel. Scan it with Expo Go as usual — no need to be on the same Wi-Fi.
+
+<details>
+<summary>Manual steps (without the helper script)</summary>
+
+```bash
+# Terminal 2 — start ngrok
+ngrok http 8081
+
+# Terminal 3 — copy the https://xxxx.ngrok-free.app URL from ngrok, then:
+cd mobile
+EXPO_PACKAGER_PROXY_URL=https://xxxx.ngrok-free.app npx expo start --port 8081
+```
+
+</details>
+
+> **Tip:** if your VPN supports split tunneling, route only Supabase traffic (`aws-0-eu-west-1.pooler.supabase.com`) through the VPN. This lets LAN mode (`npx expo start`) work without ngrok.
 
 ### Web frontend (legacy)
 
