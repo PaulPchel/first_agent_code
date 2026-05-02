@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, type StyleProp, type ViewStyle } from "react-native";
 import { colors } from "../constants/theme";
 import { NutritionGrid } from "./NutritionGrid";
 
@@ -11,6 +11,7 @@ interface Props {
   protein?: number;
   fat?: number;
   carbs?: number;
+  cardStyle?: StyleProp<ViewStyle>;
 }
 
 export function DishCard({
@@ -22,9 +23,10 @@ export function DishCard({
   protein,
   fat,
   carbs,
+  cardStyle,
 }: Props) {
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, cardStyle]}>
       <Text style={styles.name}>{dishName}</Text>
       {restaurant ? (
         <Text style={styles.restaurant}>{restaurant}</Text>
