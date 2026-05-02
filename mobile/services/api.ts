@@ -1,6 +1,14 @@
-const API_BASE = __DEV__
-  ? "http://192.168.0.16:8000" // your Mac's local IP; update if it changes
-  : "https://your-production-url.com";
+/** Set in `mobile/.env`: EXPO_PUBLIC_API_BASE=http://YOUR_LAN_IP:8000 (restart Metro after change). */
+function resolveApiBase(): string {
+  const fromEnv = process.env.EXPO_PUBLIC_API_BASE?.trim().replace(/\/$/, "");
+  if (fromEnv) return fromEnv;
+  if (__DEV__) {
+    return "http://192.168.1.70:8000";
+  }
+  return "https://your-production-url.com";
+}
+
+const API_BASE = resolveApiBase();
 
 export interface Restaurant {
   id: number;
@@ -10,7 +18,7 @@ export interface Restaurant {
 export interface Dish {
   id: number;
   dish_name: string;
-  restaurant: string;
+  restaurant?: string;
   description?: string;
   price?: number;
   calories?: number;
@@ -29,17 +37,6 @@ export interface NutritionResult {
   carbs?: number;
 }
 
-export async function searchDishes(
-  query: string,
-  restaurant?: string,
-): Promise<{ results: Dish[] }> {
-  const params = new URLSearchParams({ query });
-  if (restaurant) params.append("restaurant", restaurant);
-  const res = await fetch(`${API_BASE}/dishes/search?${params}`);
-  if (!res.ok) throw new Error("Ошибка поиска");
-  return res.json();
-}
-
 export async function fetchRestaurants(
   query?: string,
 ): Promise<{ results: Restaurant[] }> {
@@ -47,7 +44,7 @@ export async function fetchRestaurants(
     ? `${API_BASE}/restaurants?query=${encodeURIComponent(query)}`
     : `${API_BASE}/restaurants`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error("Ошибка загрузки ресторанов");
+  if (!res.ok) throw new Error("Failed to load restaurants");
   return res.json();
 }
 
@@ -57,7 +54,7 @@ export async function fetchDishes(
   const res = await fetch(
     `${API_BASE}/dishes?restaurant_id=${restaurantId}&limit=300`,
   );
-  if (!res.ok) throw new Error("Ошибка загрузки блюд");
+  if (!res.ok) throw new Error("Failed to load dishes");
   return res.json();
 }
 
@@ -70,7 +67,7 @@ export async function saveUserRestaurant(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ user_id: userId, restaurant_id: restaurantId }),
   });
-  if (!res.ok) throw new Error("Ошибка сохранения ресторана");
+  if (!res.ok) throw new Error("Failed to save restaurant");
 }
 
 export async function saveUserDish(
@@ -82,15 +79,15 @@ export async function saveUserDish(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ user_id: userId, dish_id: dishId }),
   });
-  if (!res.ok) throw new Error("Ошибка сохранения блюда");
+  if (!res.ok) throw new Error("Failed to save dish");
 }
 
-export async function getUserResult(
-  userId: string,
-): Promise<NutritionResult> {
+export async function getUserResult(userId: string): Promise<NutritionResult> {
   const res = await fetch(
     `${API_BASE}/user/result?user_id=${encodeURIComponent(userId)}`,
   );
-  if (!res.ok) throw new Error("Ошибка запроса");
+  if (!res.ok) throw new Error("Failed to fetch result");
   return res.json();
 }
+
+export const API_BASE_URL = API_BASE;
