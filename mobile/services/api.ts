@@ -1,14 +1,6 @@
-/** Set in `mobile/.env`: EXPO_PUBLIC_API_BASE=http://YOUR_LAN_IP:8000 (restart Metro after change). */
-function resolveApiBase(): string {
-  const fromEnv = process.env.EXPO_PUBLIC_API_BASE?.trim().replace(/\/$/, "");
-  if (fromEnv) return fromEnv;
-  if (__DEV__) {
-    return "http://192.168.1.70:8000";
-  }
-  return "https://your-production-url.com";
-}
-
-const API_BASE = resolveApiBase();
+const API_BASE = __DEV__
+  ? (process.env.EXPO_PUBLIC_API_BASE ?? "").trim().replace(/\/$/, "")
+  : "https://your-production-url.com";
 
 export interface Restaurant {
   id: number;

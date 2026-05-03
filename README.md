@@ -89,6 +89,12 @@ npm install
 
 ## Running
 
+### 0. Important moments
+
+You must change your Mac's local IP in mobile/.env.
+
+It's also important to turn on the local network in Expo Go's IOs settings.
+
 ### 1. Start the backend
 
 Bind to `0.0.0.0` so the mobile app can reach it over your local network:
