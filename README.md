@@ -107,7 +107,7 @@ cd mobile
 npx expo start
 ```
 
-Scan the QR code with your iPhone camera to open the app in Expo Go. Your phone must be on the same Wi-Fi network as your Mac. Also you need to turn on the local network in your Expo Go IOs settings to load the restaurants.
+Scan the QR code with your iPhone camera to open the app in Expo Go. Your phone must be on the same Wi-Fi network as your Mac.
 
 **API base URL:** the mobile app connects to your Mac's local IP (configured in `mobile/services/api.ts`). If your IP changes, update the `API_BASE` value there.
 
