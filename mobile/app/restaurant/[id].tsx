@@ -1,9 +1,20 @@
-import { useEffect, useMemo, useState } from "react";
-import { View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import {
+  View,
+  Text,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  Modal,
+  TouchableWithoutFeedback,
+  Keyboard,
+} from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors } from "../../constants/theme";
 import * as api from "../../services/api";
-import { DishListRow } from "../../components/DishListRow";
+import { DishMenuCard } from "../../components/DishMenuCard";
 
 function bestScore(d: api.Dish): number {
   const protein = d.protein ?? 0;
@@ -12,33 +23,73 @@ function bestScore(d: api.Dish): number {
   return protein * 2 - calories * 0.01 - fat * 0.4;
 }
 
+function sumMacros(items: api.Dish[]) {
+  return items.reduce(
+    (acc, d) => ({
+      calories: acc.calories + (d.calories ?? 0),
+      protein: acc.protein + (d.protein ?? 0),
+      fat: acc.fat + (d.fat ?? 0),
+      carbs: acc.carbs + (d.carbs ?? 0),
+    }),
+    { calories: 0, protein: 0, fat: 0, carbs: 0 }
+  );
+}
+
+function fmtNutrient(n: number): string {
+  return Number.isFinite(n) ? `${Math.round(n)}` : "—";
+}
+
 export default function RestaurantScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { id, name } = useLocalSearchParams<{ id?: string; name?: string }>();
   const restaurantId = Number(id);
+  const title = name ? String(name) : "Ресторан";
 
   const [dishes, setDishes] = useState<api.Dish[]>([]);
   const [activeTab, setActiveTab] = useState<"best" | "all">("best");
+  const [menuQuery, setMenuQuery] = useState("");
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [macrosOpen, setMacrosOpen] = useState(false);
 
   useEffect(() => {
     if (!restaurantId) return;
     void load();
   }, [restaurantId]);
 
-  async function load() {
+  const load = useCallback(async () => {
     try {
       const data = await api.fetchDishes(restaurantId);
       setDishes(data.results || []);
     } catch {
       setDishes([]);
     }
-  }
+  }, [restaurantId]);
 
   const bestForMe = useMemo(() => {
     return [...dishes].sort((a, b) => bestScore(b) - bestScore(a)).slice(0, 10);
   }, [dishes]);
 
-  const visible = activeTab === "best" ? bestForMe : dishes;
+  const tabList = activeTab === "best" ? bestForMe : dishes;
+
+  const filtered = useMemo(() => {
+    const q = menuQuery.trim().toLowerCase();
+    if (!q) return tabList;
+    return tabList.filter((d) => d.dish_name.toLowerCase().includes(q));
+  }, [tabList, menuQuery]);
+
+  const selectedDishes = useMemo(() => {
+    const setSel = new Set(selectedIds);
+    return dishes.filter((d) => setSel.has(d.id));
+  }, [dishes, selectedIds]);
+
+  const totals = useMemo(() => sumMacros(selectedDishes), [selectedDishes]);
+
+  function toggleId(dishId: number) {
+    setSelectedIds((prev) =>
+      prev.includes(dishId) ? prev.filter((x) => x !== dishId) : [...prev, dishId]
+    );
+  }
 
   function openDish(d: api.Dish) {
     router.push({
@@ -46,17 +97,22 @@ export default function RestaurantScreen() {
       params: {
         id: String(restaurantId),
         dishId: String(d.id),
-        restaurantName: name ? String(name) : "",
+        restaurantName: title,
       },
     });
   }
 
+  const showMacrosBar = selectedIds.length >= 2;
+  const footerPad = showMacrosBar ? 72 + insets.bottom : 16 + insets.bottom;
+
   return (
     <>
-      <Stack.Screen options={{ title: name ? String(name) : "Ресторан" }} />
-      <View style={styles.container}>
-        <Text style={styles.header}>{name ? String(name) : "Ресторан"}</Text>
-        <Text style={styles.sub}>Персональное здоровое меню (карта не используется)</Text>
+      <Stack.Screen options={{ title }} />
+      <View style={styles.screen}>
+        <Text style={styles.header}>{title}</Text>
+        <Text style={styles.sub}>
+          Поиск по меню · несколько блюд · итого КБЖУ
+        </Text>
 
         <View style={styles.tabs}>
           <Pressable
@@ -77,46 +133,219 @@ export default function RestaurantScreen() {
           </Pressable>
         </View>
 
-        <ScrollView contentContainerStyle={styles.list}>
-          {visible.length === 0 ? (
-            <Text style={styles.empty}>Нет блюд</Text>
+        <TextInput
+          style={styles.search}
+          value={menuQuery}
+          onChangeText={setMenuQuery}
+          placeholder="Поиск по блюдам в меню…"
+          placeholderTextColor={colors.muted}
+          returnKeyType="search"
+          onSubmitEditing={Keyboard.dismiss}
+        />
+
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={[styles.list, { paddingBottom: footerPad }]}
+          showsVerticalScrollIndicator={false}
+        >
+          {filtered.length === 0 ? (
+            <Text style={styles.empty}>
+              {menuQuery.trim()
+                ? "Ничего не найдено. Измени запрос."
+                : "Нет блюд в этом разделе."}
+            </Text>
           ) : (
-            visible.map((d) => (
-              <DishListRow
+            filtered.map((d) => (
+              <DishMenuCard
                 key={d.id}
                 dishName={d.dish_name}
                 calories={d.calories}
-                protein={d.protein}
-                onPress={() => openDish(d)}
+                selected={selectedIds.includes(d.id)}
+                onToggleSelect={() => toggleId(d.id)}
+                onOpenDetail={() => openDish(d)}
               />
             ))
           )}
         </ScrollView>
+
+        {showMacrosBar ? (
+          <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+            <Pressable style={styles.macroBtn} onPress={() => setMacrosOpen(true)}>
+              <Text style={styles.macroBtnIcon}>✦</Text>
+              <Text style={styles.macroBtnText}>Всего макросов</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        <Modal
+          visible={macrosOpen}
+          animationType="fade"
+          transparent
+          onRequestClose={() => setMacrosOpen(false)}
+        >
+          <TouchableWithoutFeedback onPress={() => setMacrosOpen(false)}>
+            <View style={styles.modalBackdrop} />
+          </TouchableWithoutFeedback>
+          <View style={styles.modalCenter}>
+            <View style={styles.modalCard}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Итого по выбору</Text>
+                <Pressable onPress={() => setMacrosOpen(false)} hitSlop={12}>
+                  <Text style={styles.modalClose}>✕</Text>
+                </Pressable>
+              </View>
+              <Text style={styles.modalRestaurant}>{title}</Text>
+              <Text style={styles.modalSubtitle} numberOfLines={4}>
+                {selectedDishes.map((d) => d.dish_name).join(" · ")}
+              </Text>
+
+              <View style={styles.grid}>
+                <MacroCell label="Ккал" value={`${fmtNutrient(totals.calories)}`} unit="" />
+                <MacroCell label="Белки" value={fmtNutrient(totals.protein)} unit="г" />
+                <MacroCell label="Жиры" value={fmtNutrient(totals.fat)} unit="г" />
+                <MacroCell label="Углеводы" value={fmtNutrient(totals.carbs)} unit="г" />
+              </View>
+
+              <Pressable style={styles.modalDone} onPress={() => setMacrosOpen(false)}>
+                <Text style={styles.modalDoneText}>Готово</Text>
+              </Pressable>
+            </View>
+          </View>
+        </Modal>
       </View>
     </>
   );
 }
 
+function MacroCell({
+  label,
+  value,
+  unit,
+}: {
+  label: string;
+  value: string;
+  unit: string;
+}) {
+  return (
+    <View style={styles.macroCell}>
+      <Text style={styles.macroLabel}>{label}</Text>
+      <Text style={styles.macroValue}>
+        {value}
+        {unit ? <Text style={styles.macroUnit}> {unit}</Text> : null}
+      </Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg, padding: 16 },
+  screen: { flex: 1, backgroundColor: colors.bg, paddingHorizontal: 16, paddingTop: 8 },
   header: { color: colors.text, fontSize: 24, fontWeight: "800" },
-  sub: { color: colors.muted, marginTop: 4, marginBottom: 14 },
+  sub: { color: colors.muted, marginTop: 4, marginBottom: 12, fontSize: 13 },
   tabs: { flexDirection: "row", gap: 8, marginBottom: 12 },
   tab: {
     flex: 1,
     backgroundColor: colors.surface2,
-    borderRadius: 10,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: "center",
-    paddingVertical: 10,
+    paddingVertical: 11,
   },
   tabActive: {
     backgroundColor: colors.accentSoft,
     borderColor: colors.accent,
   },
-  tabText: { color: colors.text, fontWeight: "600" },
+  tabText: { color: colors.text, fontWeight: "600", fontSize: 14 },
   tabTextActive: { color: colors.accent },
-  list: { paddingBottom: 28 },
-  empty: { color: colors.muted, textAlign: "center", marginTop: 30 },
+  search: {
+    backgroundColor: colors.inputBg,
+    color: colors.text,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  list: { paddingTop: 4 },
+  empty: { color: colors.muted, textAlign: "center", marginTop: 36, paddingHorizontal: 12 },
+  footer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    backgroundColor: colors.bg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  macroBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: colors.accent,
+    borderRadius: 14,
+    paddingVertical: 14,
+  },
+  macroBtnIcon: { color: "#000", fontSize: 16, fontWeight: "700" },
+  macroBtnText: { color: "#000", fontWeight: "800", fontSize: 16 },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.overlay,
+  },
+  modalCenter: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "center",
+    paddingHorizontal: 20,
+  },
+  modalCard: {
+    backgroundColor: colors.modalSurface,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 18,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  modalTitle: { color: colors.text, fontSize: 18, fontWeight: "800" },
+  modalClose: { color: colors.muted, fontSize: 20, padding: 4 },
+  modalRestaurant: {
+    color: colors.accent,
+    fontWeight: "700",
+    marginTop: 10,
+    fontSize: 15,
+  },
+  modalSubtitle: { color: colors.textSecondary, marginTop: 6, fontSize: 13, lineHeight: 18 },
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 18,
+    gap: 10,
+  },
+  macroCell: {
+    width: "47%",
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+  },
+  macroLabel: { color: colors.muted, fontSize: 12, fontWeight: "600", marginBottom: 4 },
+  macroValue: { color: colors.text, fontSize: 22, fontWeight: "800" },
+  macroUnit: { fontSize: 15, fontWeight: "700", color: colors.muted },
+  modalDone: {
+    marginTop: 18,
+    backgroundColor: colors.accent,
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  modalDoneText: { color: "#000", fontWeight: "800", fontSize: 16 },
 });

@@ -5,8 +5,13 @@ export const colors = {
   border: "#333333",
   accent: "#ff9800",
   accentSoft: "rgba(255, 152, 0, 0.14)",
+  accentMuted: "#e65100",
+  calorie: "#ffb74d",
   muted: "#9a9a9a",
   text: "#f2f2f2",
   textSecondary: "#c8c8c8",
   inputBg: "#1f1f1f",
+  overlay: "rgba(0, 0, 0, 0.65)",
+  modalSurface: "#1a1a1a",
+  checkOn: "#ff9800",
 } as const;
