@@ -68,8 +68,11 @@ export default function HomeScreen() {
                 style={styles.row}
                 onPress={() =>
                   router.push({
-                    pathname: "/restaurants",
-                    params: { q: query, selectedId: String(r.id) },
+                    pathname: "/loading",
+                    params: {
+                      restaurantId: String(r.id),
+                      restaurantName: r.name,
+                    },
                   })
                 }
               >
@@ -79,13 +82,6 @@ export default function HomeScreen() {
             ))
           )}
         </ScrollView>
-
-        <Pressable
-          style={styles.primaryBtn}
-          onPress={() => router.push({ pathname: "/restaurants", params: { q: query } })}
-        >
-          <Text style={styles.primaryBtnText}>Выбрать ресторан</Text>
-        </Pressable>
       </View>
     </>
   );
@@ -123,13 +119,5 @@ const styles = StyleSheet.create({
   },
   rowText: { flex: 1, color: colors.text, fontSize: 16 },
   chevron: { fontSize: 22, color: colors.accent, fontWeight: "300" },
-  empty: { color: colors.muted, textAlign: "center", padding: 20, fontSize: 14 },
-  primaryBtn: {
-    marginTop: 14,
-    backgroundColor: colors.accent,
-    borderRadius: 12,
-    paddingVertical: 13,
-    alignItems: "center",
-  },
-  primaryBtnText: { color: "#000", fontWeight: "700", fontSize: 16 },
+  empty: { color: colors.muted, textAlign: "center", padding: 20, fontSize: 14 }
 });
