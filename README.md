@@ -89,6 +89,10 @@ npm install
 
 ## Running
 
+### 0. Important moments
+
+It's very important to turn on the local network in Expo Go's IOs settings.
+
 ### 1. Start the backend
 
 Bind to `0.0.0.0` so the mobile app can reach it over your local network:
