@@ -123,7 +123,7 @@ export default function RestaurantScreen() {
       <View style={styles.screen}>
         <Text style={styles.header}>{title}</Text>
         <Text style={styles.sub}>
-          Лучшее для меня — по сохранённым преференсам · поиск · несколько блюд · итого КБЖУ
+          Лучшее для меня — по сохранённым преференсам, калориям · поиск · несколько блюд · итого КБЖУ
         </Text>
 
         <View style={styles.tabs}>

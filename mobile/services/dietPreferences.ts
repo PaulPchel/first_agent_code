@@ -5,14 +5,14 @@ const STORAGE_KEY = "diet_preferences_v1";
 
 export const CALORIE_STEPS = [1, 5, 10, 50, 100] as const;
 
-/** Ккал из граммов БЖУ: белок и углеводы 4 ккал/г, жиры 9 ккал/г. */
+
 export function macroCaloriesFromGrams(proteinG: number, carbG: number, fatG: number): number {
   return 4 * proteinG + 4 * carbG + 9 * fatG;
 }
 
-/** Диапазон целевых ккал на приём (как в модалке предпочтений). */
-export const MEAL_CAL_MIN = 200;
-export const MEAL_CAL_MAX = 2500;
+
+export const MEAL_CAL_MIN = 0;
+export const MEAL_CAL_MAX = 3000;
 
 export function clampMealCalories(cal: number): number {
   return Math.min(MEAL_CAL_MAX, Math.max(MEAL_CAL_MIN, cal));
@@ -42,7 +42,7 @@ export const DEFAULT_DIET_PREFERENCE: DietPreference = {
   dislikes: [],
 };
 
-/** Масштабирует граммы БЖУ под targetCalories (пропорции сохраняются). */
+
 export function alignMacrosToTargetCalories(p: DietPreference): DietPreference {
   const t = clampMealCalories(p.targetCalories);
   const k = macroCaloriesFromGrams(p.proteinG, p.carbG, p.fatG);
@@ -68,9 +68,7 @@ export function alignMacrosToTargetCalories(p: DietPreference): DietPreference {
   };
 }
 
-/**
- * После изменения граммов: ккал = 4P + 4C + 9F; при выходе за диапазон — масштабирование всех трёх макро.
- */
+
 export function syncCaloriesWithMacrosAfterMacroEdit(p: DietPreference): DietPreference {
   const k = macroCaloriesFromGrams(p.proteinG, p.carbG, p.fatG);
   if (k <= 0) {
@@ -95,45 +93,10 @@ export function normalizeLoadedDietPreference(p: DietPreference): DietPreference
 }
 
 export function scoreDishForPreferences(d: Dish, p: DietPreference): number {
-  const calT = Math.max(p.targetCalories, 1);
-  const pT = Math.max(p.proteinG, 0.1);
-  const cT = Math.max(p.carbG, 0.1);
-  const fT = Math.max(p.fatG, 0.1);
-
-  const dc = d.calories ?? 0;
-  const dp = d.protein ?? 0;
-  const dCarb = d.carbs ?? 0;
-  const df = d.fat ?? 0;
-
-  const calScore = 1 - Math.min(1, Math.abs(dc - calT) / calT);
-  const pScore = 1 - Math.min(1, Math.abs(dp - pT) / pT);
-  const cScore = 1 - Math.min(1, Math.abs(dCarb - cT) / cT);
-  const fScore = 1 - Math.min(1, Math.abs(df - fT) / fT);
-
-  let score = (calScore * 0.35 + pScore * 0.22 + cScore * 0.22 + fScore * 0.21) * 100;
-
-  const name = d.dish_name.toLowerCase();
-  for (const like of p.likes) {
-    const t = like.trim().toLowerCase();
-    if (t.length >= 2 && name.includes(t)) score += 4;
-  }
-  for (const dis of p.dislikes) {
-    const t = dis.trim().toLowerCase();
-    if (t.length >= 2 && name.includes(t)) score -= 12;
-  }
-
-  if (p.dietType === "keto" || p.dietType === "lowcarb") {
-    score -= Math.min(dCarb, 120) * 0.12;
-  }
-  if (p.dietType === "carnivore") {
-    score -= Math.min(dCarb, 80) * 0.2;
-  }
-  if (p.dietType === "vegan") {
-    const hint = ["мяс", "кури", "стейк", "рыб", "лосос", "свин", "говя", "яйц", "сыр", "молок", "cream", "chicken", "beef", "pork", "fish", "salmon", "egg"];
-    if (hint.some((w) => name.includes(w))) score -= 14;
-  }
-
-  return score;
+    const calT = Math.max(p.targetCalories, 1);
+    const dc = d.calories ?? 0;
+    const calScore = 1 - Math.min(1, Math.abs(dc - calT) / calT);
+    return calScore * 100;
 }
 
 export const DIET_OPTIONS = [
