@@ -9,12 +9,15 @@ import {
   Modal,
   TouchableWithoutFeedback,
   Keyboard,
+  Platform,
 } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import MapView, { Marker } from "react-native-maps";
 import { colors, shadow } from "../../constants/theme";
 import * as api from "../../services/api";
+import { useUserLocation } from "../../services/location";
 import { DishMenuCard } from "../../components/DishMenuCard";
 import {
   DEFAULT_DIET_PREFERENCE,
@@ -22,6 +25,8 @@ import {
   loadDietPreferences,
   scoreDishForPreferences,
 } from "../../services/dietPreferences";
+
+const MAP_HEIGHT = 180;
 
 function sumMacros(items: api.Dish[]) {
   return items.reduce(
@@ -39,13 +44,21 @@ function fmtNutrient(n: number): string {
   return Number.isFinite(n) ? `${Math.round(n)}` : "—";
 }
 
+function formatDistance(km?: number | null): string {
+  if (km == null) return "";
+  if (km < 1) return `${Math.round(km * 1000)} m`;
+  return `${km.toFixed(1)} km`;
+}
+
 export default function RestaurantScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { location } = useUserLocation();
   const { id, name } = useLocalSearchParams<{ id?: string; name?: string }>();
   const restaurantId = Number(id);
   const title = name ? String(name) : "Ресторан";
 
+  const [restaurant, setRestaurant] = useState<api.Restaurant | null>(null);
   const [dishes, setDishes] = useState<api.Dish[]>([]);
   const [activeTab, setActiveTab] = useState<"best" | "all">("best");
   const [menuQuery, setMenuQuery] = useState("");
@@ -61,10 +74,11 @@ export default function RestaurantScreen() {
 
   useEffect(() => {
     if (!restaurantId) return;
-    void load();
-  }, [restaurantId]);
+    void loadDishes();
+    void loadRestaurant();
+  }, [restaurantId, location]);
 
-  const load = useCallback(async () => {
+  const loadDishes = useCallback(async () => {
     try {
       const data = await api.fetchDishes(restaurantId);
       setDishes(data.results || []);
@@ -72,6 +86,19 @@ export default function RestaurantScreen() {
       setDishes([]);
     }
   }, [restaurantId]);
+
+  const loadRestaurant = useCallback(async () => {
+    try {
+      const data = await api.fetchRestaurant(
+        restaurantId,
+        location?.latitude,
+        location?.longitude,
+      );
+      setRestaurant(data);
+    } catch {
+      /* use route-param title as fallback */
+    }
+  }, [restaurantId, location]);
 
   const bestForMe = useMemo(() => {
     return [...dishes]
@@ -117,13 +144,53 @@ export default function RestaurantScreen() {
   const showMacrosBar = selectedIds.length >= 2;
   const footerPad = showMacrosBar ? 72 + insets.bottom : 16 + insets.bottom;
 
+  const hasCoords = restaurant?.latitude != null && restaurant?.longitude != null;
+
   return (
     <>
       <Stack.Screen options={{ title }} />
       <View style={styles.screen}>
-        <Text style={styles.header}>{title}</Text>
+        {hasCoords && (
+          <View style={styles.mapContainer}>
+            <MapView
+              style={styles.map}
+              initialRegion={{
+                latitude: restaurant!.latitude!,
+                longitude: restaurant!.longitude!,
+                latitudeDelta: 0.008,
+                longitudeDelta: 0.008,
+              }}
+              scrollEnabled={false}
+              zoomEnabled={false}
+              pitchEnabled={false}
+              rotateEnabled={false}
+              {...(Platform.OS === "android" ? { liteMode: true } : {})}
+            >
+              <Marker
+                coordinate={{
+                  latitude: restaurant!.latitude!,
+                  longitude: restaurant!.longitude!,
+                }}
+                title={restaurant!.name}
+              />
+            </MapView>
+          </View>
+        )}
+
+        <View style={styles.infoRow}>
+          <Text style={styles.header}>{restaurant?.name ?? title}</Text>
+          <View style={styles.badges}>
+            {restaurant?.distance_km != null && (
+              <Text style={styles.badge}>📍 {formatDistance(restaurant.distance_km)}</Text>
+            )}
+            {restaurant?.rating != null && (
+              <Text style={styles.badge}>⭐ {restaurant.rating.toFixed(1)}</Text>
+            )}
+          </View>
+        </View>
+
         <Text style={styles.sub}>
-          Лучшее для меня — по сохранённым преференсам, калориям · поиск · несколько блюд · итого КБЖУ
+          MENU · CHOOSE YOUR MEALS
         </Text>
 
         <View style={styles.tabs}>
@@ -132,7 +199,7 @@ export default function RestaurantScreen() {
             onPress={() => setActiveTab("best")}
           >
             <Text style={[styles.tabText, activeTab === "best" && styles.tabTextActive]}>
-              Лучшее для меня
+              ✦ Best for you
             </Text>
           </Pressable>
           <Pressable
@@ -140,7 +207,7 @@ export default function RestaurantScreen() {
             onPress={() => setActiveTab("all")}
           >
             <Text style={[styles.tabText, activeTab === "all" && styles.tabTextActive]}>
-              Все блюда
+              All dishes
             </Text>
           </Pressable>
         </View>
@@ -149,7 +216,7 @@ export default function RestaurantScreen() {
           style={styles.search}
           value={menuQuery}
           onChangeText={setMenuQuery}
-          placeholder="Поиск по блюдам в меню…"
+          placeholder="Search dishes…"
           placeholderTextColor={colors.muted}
           returnKeyType="search"
           onSubmitEditing={Keyboard.dismiss}
@@ -163,8 +230,8 @@ export default function RestaurantScreen() {
           {filtered.length === 0 ? (
             <Text style={styles.empty}>
               {menuQuery.trim()
-                ? "Ничего не найдено. Измени запрос."
-                : "Нет блюд в этом разделе."}
+                ? "Nothing found. Try a different query."
+                : "No dishes in this section."}
             </Text>
           ) : (
             filtered.map((d) => (
@@ -184,7 +251,7 @@ export default function RestaurantScreen() {
           <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
             <Pressable style={styles.macroBtn} onPress={() => setMacrosOpen(true)}>
               <Text style={styles.macroBtnIcon}>✦</Text>
-              <Text style={styles.macroBtnText}>Всего макросов</Text>
+              <Text style={styles.macroBtnText}>Total macros</Text>
             </Pressable>
           </View>
         ) : null}
@@ -201,25 +268,25 @@ export default function RestaurantScreen() {
           <View style={styles.modalCenter}>
             <View style={styles.modalCard}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Итого по выбору</Text>
+                <Text style={styles.modalTitle}>Selection total</Text>
                 <Pressable onPress={() => setMacrosOpen(false)} hitSlop={12}>
                   <Text style={styles.modalClose}>✕</Text>
                 </Pressable>
               </View>
-              <Text style={styles.modalRestaurant}>{title}</Text>
+              <Text style={styles.modalRestaurant}>{restaurant?.name ?? title}</Text>
               <Text style={styles.modalSubtitle} numberOfLines={4}>
                 {selectedDishes.map((d) => d.dish_name).join(" · ")}
               </Text>
 
-              <View style={styles.grid}>
-                <MacroCell label="Ккал" value={`${fmtNutrient(totals.calories)}`} unit="" />
-                <MacroCell label="Белки" value={fmtNutrient(totals.protein)} unit="г" />
-                <MacroCell label="Жиры" value={fmtNutrient(totals.fat)} unit="г" />
-                <MacroCell label="Углеводы" value={fmtNutrient(totals.carbs)} unit="г" />
+              <View style={styles.macroGrid}>
+                <MacroCell label="Kcal" value={`${fmtNutrient(totals.calories)}`} unit="" />
+                <MacroCell label="Protein" value={fmtNutrient(totals.protein)} unit="g" />
+                <MacroCell label="Fat" value={fmtNutrient(totals.fat)} unit="g" />
+                <MacroCell label="Carbs" value={fmtNutrient(totals.carbs)} unit="g" />
               </View>
 
               <Pressable style={styles.modalDone} onPress={() => setMacrosOpen(false)}>
-                <Text style={styles.modalDoneText}>Готово</Text>
+                <Text style={styles.modalDoneText}>Done</Text>
               </Pressable>
             </View>
           </View>
@@ -250,10 +317,39 @@ function MacroCell({
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg, paddingHorizontal: 16, paddingTop: 8 },
-  header: { color: colors.text, fontSize: 26, fontWeight: "800" },
-  sub: { color: colors.textSecondary, marginTop: 4, marginBottom: 14, fontSize: 13, lineHeight: 18 },
-  tabs: { flexDirection: "row", gap: 8, marginBottom: 12 },
+  screen: { flex: 1, backgroundColor: colors.bg },
+  mapContainer: {
+    height: MAP_HEIGHT,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    overflow: "hidden",
+  },
+  map: { flex: 1 },
+  infoRow: {
+    paddingHorizontal: 16,
+    paddingTop: 14,
+  },
+  header: { color: colors.text, fontSize: 24, fontWeight: "800" },
+  badges: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 6,
+  },
+  badge: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  sub: {
+    color: colors.muted,
+    marginTop: 16,
+    marginBottom: 10,
+    paddingHorizontal: 16,
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
+  tabs: { flexDirection: "row", gap: 8, marginBottom: 12, paddingHorizontal: 16 },
   tab: {
     flex: 1,
     backgroundColor: colors.surface,
@@ -278,11 +374,12 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     fontSize: 16,
     marginBottom: 12,
+    marginHorizontal: 16,
     borderWidth: 1,
     borderColor: colors.border,
     ...shadow.soft,
   },
-  list: { paddingTop: 4 },
+  list: { paddingTop: 4, paddingHorizontal: 16 },
   empty: { color: colors.muted, textAlign: "center", marginTop: 36, paddingHorizontal: 12 },
   footer: {
     position: "absolute",
@@ -338,7 +435,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   modalSubtitle: { color: colors.textSecondary, marginTop: 6, fontSize: 13, lineHeight: 18 },
-  grid: {
+  macroGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     marginTop: 18,

@@ -7,6 +7,11 @@ class Restaurant(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False, index=True)
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
+    address = Column(String, nullable=True)
+    emoji = Column(String, nullable=True)
+    rating = Column(Float, nullable=True)
 
 
 class Dish(Base):

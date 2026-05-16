@@ -1,13 +1,36 @@
 import { useEffect, useState } from "react";
-import { View, Text, TextInput, Pressable, ScrollView, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Dimensions,
+} from "react-native";
 import { Stack, useRouter } from "expo-router";
 import * as api from "../services/api";
+import { useUserLocation } from "../services/location";
 import { colors, shadow } from "../constants/theme";
 import { DietPreferenceIcon } from "../components/DietPreferenceIcon";
 import { DietPreferenceModal } from "../components/DietPreferenceModal";
 
+const CARD_GAP = 10;
+const CARD_COLUMNS = 3;
+const SCREEN_PADDING = 20;
+const CARD_WIDTH =
+  (Dimensions.get("window").width - SCREEN_PADDING * 2 - CARD_GAP * (CARD_COLUMNS - 1)) /
+  CARD_COLUMNS;
+
+function formatDistance(km?: number | null): string {
+  if (km == null) return "";
+  if (km < 1) return `${Math.round(km * 1000)} m`;
+  return `${km.toFixed(1)} km`;
+}
+
 export default function HomeScreen() {
   const router = useRouter();
+  const { location } = useUserLocation();
   const [query, setQuery] = useState("");
   const [restaurants, setRestaurants] = useState<api.Restaurant[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -15,12 +38,16 @@ export default function HomeScreen() {
 
   useEffect(() => {
     void loadRestaurants("");
-  }, []);
+  }, [location]);
 
   async function loadRestaurants(q: string) {
     setLoadError(null);
     try {
-      const data = await api.fetchRestaurants(q.trim() || undefined);
+      const data = await api.fetchRestaurants(
+        q.trim() || undefined,
+        location?.latitude,
+        location?.longitude,
+      );
       setRestaurants(data.results || []);
     } catch (e) {
       setRestaurants([]);
@@ -32,6 +59,15 @@ export default function HomeScreen() {
     setQuery(text);
     void loadRestaurants(text);
   }
+
+  function openRestaurant(r: api.Restaurant) {
+    router.push({
+      pathname: "/loading",
+      params: { restaurantId: String(r.id), restaurantName: r.name },
+    });
+  }
+
+  const nearby = query.trim() ? restaurants : restaurants.slice(0, 6);
 
   return (
     <>
@@ -50,11 +86,12 @@ export default function HomeScreen() {
           ),
         }}
       />
-      <View style={styles.container}>
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={styles.screenContent}
+        showsVerticalScrollIndicator={false}
+      >
         <Text style={styles.title}>Что хочешь поесть?</Text>
-        <Text style={styles.caption}>
-          Список из каталога (геолокации нет). Ищи по названию или оставь поле пустым.
-        </Text>
 
         <TextInput
           style={styles.input}
@@ -64,45 +101,45 @@ export default function HomeScreen() {
           placeholderTextColor={colors.muted}
         />
 
-        <Text style={styles.apiHint} numberOfLines={2}>
-          API: {api.API_BASE_URL}
-        </Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Nearby Restaurants</Text>
+          {!query.trim() && restaurants.length > 6 && (
+            <Pressable onPress={() => router.push("/restaurants")}>
+              <Text style={styles.seeAll}>See all &gt;</Text>
+            </Pressable>
+          )}
+        </View>
 
-        <Text style={styles.section}>Рестораны</Text>
-        <ScrollView style={styles.list} contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
-          {restaurants.length === 0 ? (
-            <Text style={styles.empty}>
-              {loadError
-                ? `Ошибка сети: ${loadError}`
-                : query.trim()
-                  ? "Ничего не найдено. Очисти поиск или попробуй другое имя."
-                  : "Список пуст. Проверь, что бэкенд запущен и в БД есть рестораны."}
-            </Text>
-          ) : (
-            restaurants.map((r) => (
+        {restaurants.length === 0 ? (
+          <Text style={styles.empty}>
+            {loadError
+              ? `Network error: ${loadError}`
+              : query.trim()
+                ? "Nothing found. Try a different name."
+                : "No restaurants. Check that the backend is running."}
+          </Text>
+        ) : (
+          <View style={styles.grid}>
+            {nearby.map((r) => (
               <Pressable
                 key={r.id}
-                style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
-                onPress={() =>
-                  router.push({
-                    pathname: "/loading",
-                    params: {
-                      restaurantId: String(r.id),
-                      restaurantName: r.name,
-                    },
-                  })
-                }
+                style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+                onPress={() => openRestaurant(r)}
               >
-                <View style={styles.rowIcon}>
-                  <Text style={styles.rowIconText}>{r.name.charAt(0).toUpperCase()}</Text>
-                </View>
-                <Text style={styles.rowText}>{r.name}</Text>
-                <Text style={styles.chevron}>›</Text>
+                <Text style={styles.cardEmoji}>{r.emoji || "🍽️"}</Text>
+                <Text style={styles.cardName} numberOfLines={1}>
+                  {r.name}
+                </Text>
+                {r.distance_km != null && (
+                  <Text style={styles.cardDistance}>
+                    📍 {formatDistance(r.distance_km)}
+                  </Text>
+                )}
               </Pressable>
-            ))
-          )}
-        </ScrollView>
-      </View>
+            ))}
+          </View>
+        )}
+      </ScrollView>
 
       <DietPreferenceModal visible={prefsOpen} onClose={() => setPrefsOpen(false)} />
     </>
@@ -110,9 +147,15 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg, padding: 20 },
-  title: { color: colors.text, fontSize: 26, fontWeight: "800", marginTop: 4, marginBottom: 6 },
-  caption: { color: colors.textSecondary, fontSize: 14, lineHeight: 20, marginBottom: 16 },
+  screen: { flex: 1, backgroundColor: colors.bg },
+  screenContent: { padding: SCREEN_PADDING, paddingBottom: 40 },
+  title: {
+    color: colors.text,
+    fontSize: 26,
+    fontWeight: "800",
+    marginTop: 4,
+    marginBottom: 16,
+  },
   input: {
     backgroundColor: colors.inputBg,
     color: colors.text,
@@ -122,37 +165,61 @@ const styles = StyleSheet.create({
     fontSize: 16,
     borderWidth: 1,
     borderColor: colors.border,
+    marginBottom: 20,
     ...shadow.soft,
   },
-  apiHint: { color: colors.muted, fontSize: 11, marginTop: 10 },
-  section: { color: colors.text, fontWeight: "800", fontSize: 18, marginTop: 18, marginBottom: 12 },
-  list: { flex: 1 },
-  listContent: { paddingBottom: 24, gap: 10 },
-  row: {
+  sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 14,
+  },
+  sectionTitle: {
+    color: colors.text,
+    fontWeight: "800",
+    fontSize: 18,
+  },
+  seeAll: {
+    color: colors.accent,
+    fontWeight: "700",
+    fontSize: 14,
+  },
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: CARD_GAP,
+  },
+  card: {
+    width: CARD_WIDTH,
     backgroundColor: colors.surface,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingHorizontal: 14,
     paddingVertical: 14,
+    paddingHorizontal: 8,
+    alignItems: "center",
     ...shadow.card,
   },
-  rowPressed: { opacity: 0.92 },
-  rowIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.accentSoft,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
+  cardPressed: { opacity: 0.9 },
+  cardEmoji: { fontSize: 32, marginBottom: 8 },
+  cardName: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: "700",
+    textAlign: "center",
+    marginBottom: 4,
   },
-  rowIconText: { color: colors.accentMuted, fontWeight: "800", fontSize: 18 },
-  rowText: { flex: 1, color: colors.text, fontSize: 16, fontWeight: "600" },
-  chevron: { fontSize: 24, color: colors.muted, fontWeight: "300" },
-  empty: { color: colors.muted, textAlign: "center", padding: 24, fontSize: 14 },
+  cardDistance: {
+    color: colors.muted,
+    fontSize: 11,
+    fontWeight: "500",
+  },
+  empty: {
+    color: colors.muted,
+    textAlign: "center",
+    padding: 24,
+    fontSize: 14,
+  },
   headerIconBtn: {
     width: 40,
     height: 40,
