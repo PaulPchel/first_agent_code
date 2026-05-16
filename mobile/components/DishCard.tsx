@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet, type StyleProp, type ViewStyle } from "react-native";
-import { colors } from "../constants/theme";
+import { colors, shadow } from "../constants/theme";
 import { NutritionGrid } from "./NutritionGrid";
 
 interface Props {
@@ -28,18 +28,9 @@ export function DishCard({
   return (
     <View style={[styles.card, cardStyle]}>
       <Text style={styles.name}>{dishName}</Text>
-      {restaurant ? (
-        <Text style={styles.restaurant}>{restaurant}</Text>
-      ) : null}
-      {description ? (
-        <Text style={styles.description}>{description}</Text>
-      ) : null}
-      <NutritionGrid
-        calories={calories}
-        protein={protein}
-        fat={fat}
-        carbs={carbs}
-      />
+      {restaurant ? <Text style={styles.restaurant}>{restaurant}</Text> : null}
+      {description ? <Text style={styles.description}>{description}</Text> : null}
+      <NutritionGrid calories={calories} protein={protein} fat={fat} carbs={carbs} />
       {price != null ? (
         <Text style={styles.price}>
           {Number.isInteger(price) ? price : price.toFixed(1)} ₽
@@ -52,37 +43,34 @@ export function DishCard({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
-    padding: 16,
-    borderRadius: 14,
+    padding: 18,
+    borderRadius: 18,
     marginBottom: 14,
     borderWidth: 1,
     borderColor: colors.border,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    elevation: 8,
+    ...shadow.card,
   },
   name: {
-    fontSize: 18,
-    fontWeight: "600",
+    fontSize: 20,
+    fontWeight: "700",
     color: colors.text,
     letterSpacing: -0.3,
     marginBottom: 4,
   },
   restaurant: {
     fontSize: 14,
-    color: colors.muted,
+    color: colors.textSecondary,
     marginBottom: 10,
   },
   description: {
     fontSize: 14,
     color: colors.textSecondary,
     marginBottom: 10,
+    lineHeight: 20,
   },
   price: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: colors.accent,
+    fontSize: 17,
+    fontWeight: "700",
+    color: colors.accentMuted,
   },
 });

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { colors } from "../constants/theme";
+import { colors, shadow } from "../constants/theme";
 import { getUserId } from "../services/userId";
 import * as api from "../services/api";
 
@@ -65,9 +65,11 @@ export default function LoadingScreen() {
     <>
       <Stack.Screen options={{ title: "Загрузка" }} />
       <View style={styles.container}>
-        <Text style={styles.percent}>{progress}%</Text>
-        <ActivityIndicator color={colors.accent} size="large" />
-        <Text style={styles.status}>{status}</Text>
+        <View style={styles.card}>
+          <Text style={styles.percent}>{progress}%</Text>
+          <ActivityIndicator color={colors.accent} size="large" />
+          <Text style={styles.status}>{status}</Text>
+        </View>
       </View>
     </>
   );
@@ -79,17 +81,31 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
     alignItems: "center",
     justifyContent: "center",
-    padding: 20,
+    padding: 24,
+  },
+  card: {
+    width: "100%",
+    maxWidth: 320,
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: 36,
+    paddingHorizontal: 24,
+    alignItems: "center",
+    ...shadow.card,
   },
   percent: {
     color: colors.text,
-    fontSize: 46,
+    fontSize: 48,
     fontWeight: "800",
-    marginBottom: 16,
+    marginBottom: 20,
   },
   status: {
-    color: colors.muted,
-    marginTop: 14,
+    color: colors.textSecondary,
+    marginTop: 16,
     fontSize: 15,
+    textAlign: "center",
+    lineHeight: 22,
   },
 });

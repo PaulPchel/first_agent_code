@@ -13,7 +13,7 @@ import {
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors } from "../../constants/theme";
+import { colors, shadow } from "../../constants/theme";
 import * as api from "../../services/api";
 import { DishMenuCard } from "../../components/DishMenuCard";
 import {
@@ -251,34 +251,36 @@ function MacroCell({
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg, paddingHorizontal: 16, paddingTop: 8 },
-  header: { color: colors.text, fontSize: 24, fontWeight: "800" },
-  sub: { color: colors.muted, marginTop: 4, marginBottom: 12, fontSize: 13 },
+  header: { color: colors.text, fontSize: 26, fontWeight: "800" },
+  sub: { color: colors.textSecondary, marginTop: 4, marginBottom: 14, fontSize: 13, lineHeight: 18 },
   tabs: { flexDirection: "row", gap: 8, marginBottom: 12 },
   tab: {
     flex: 1,
-    backgroundColor: colors.surface2,
-    borderRadius: 14,
+    backgroundColor: colors.surface,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: "center",
-    paddingVertical: 11,
+    paddingVertical: 12,
+    ...shadow.soft,
   },
   tabActive: {
     backgroundColor: colors.accentSoft,
     borderColor: colors.accent,
   },
-  tabText: { color: colors.text, fontWeight: "600", fontSize: 14 },
-  tabTextActive: { color: colors.accent },
+  tabText: { color: colors.textSecondary, fontWeight: "600", fontSize: 14 },
+  tabTextActive: { color: colors.accentMuted, fontWeight: "700" },
   search: {
     backgroundColor: colors.inputBg,
     color: colors.text,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     fontSize: 16,
     marginBottom: 12,
     borderWidth: 1,
     borderColor: colors.border,
+    ...shadow.soft,
   },
   list: { paddingTop: 4 },
   empty: { color: colors.muted, textAlign: "center", marginTop: 36, paddingHorizontal: 12 },
@@ -299,11 +301,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
     backgroundColor: colors.accent,
-    borderRadius: 14,
-    paddingVertical: 14,
+    borderRadius: 16,
+    paddingVertical: 15,
+    ...shadow.soft,
   },
-  macroBtnIcon: { color: "#000", fontSize: 16, fontWeight: "700" },
-  macroBtnText: { color: "#000", fontWeight: "800", fontSize: 16 },
+  macroBtnIcon: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
+  macroBtnText: { color: "#FFFFFF", fontWeight: "800", fontSize: 16 },
   modalBackdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.overlay,
@@ -315,10 +318,11 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     backgroundColor: colors.modalSurface,
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 18,
+    padding: 20,
+    ...shadow.card,
   },
   modalHeader: {
     flexDirection: "row",
@@ -328,7 +332,7 @@ const styles = StyleSheet.create({
   modalTitle: { color: colors.text, fontSize: 18, fontWeight: "800" },
   modalClose: { color: colors.muted, fontSize: 20, padding: 4 },
   modalRestaurant: {
-    color: colors.accent,
+    color: colors.accentMuted,
     fontWeight: "700",
     marginTop: 10,
     fontSize: 15,
@@ -342,7 +346,7 @@ const styles = StyleSheet.create({
   },
   macroCell: {
     width: "47%",
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surface2,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.border,
@@ -355,9 +359,9 @@ const styles = StyleSheet.create({
   modalDone: {
     marginTop: 18,
     backgroundColor: colors.accent,
-    borderRadius: 14,
+    borderRadius: 16,
     paddingVertical: 14,
     alignItems: "center",
   },
-  modalDoneText: { color: "#000", fontWeight: "800", fontSize: 16 },
+  modalDoneText: { color: "#FFFFFF", fontWeight: "800", fontSize: 16 },
 });

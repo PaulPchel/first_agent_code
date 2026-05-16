@@ -1,11 +1,12 @@
 import { View, StyleSheet } from "react-native";
+import { colors } from "../constants/theme";
 
 export function DietPreferenceIcon() {
   return (
     <View style={styles.wrap}>
-      <View style={[styles.bar, { backgroundColor: "#42a5f5", width: "100%" }]} />
-      <View style={[styles.bar, { backgroundColor: "#ff9800", width: "72%" }]} />
-      <View style={[styles.bar, { backgroundColor: "#66bb6a", width: "88%" }]} />
+      <View style={[styles.bar, { backgroundColor: colors.protein, width: "100%" }]} />
+      <View style={[styles.bar, { backgroundColor: colors.carb, width: "72%" }]} />
+      <View style={[styles.bar, { backgroundColor: colors.fat, width: "88%" }]} />
     </View>
   );
 }
