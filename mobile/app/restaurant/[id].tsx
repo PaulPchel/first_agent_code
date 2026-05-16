@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -11,17 +11,17 @@ import {
   Keyboard,
 } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors } from "../../constants/theme";
 import * as api from "../../services/api";
 import { DishMenuCard } from "../../components/DishMenuCard";
-
-function bestScore(d: api.Dish): number {
-  const protein = d.protein ?? 0;
-  const calories = d.calories ?? 0;
-  const fat = d.fat ?? 0;
-  return protein * 2 - calories * 0.01 - fat * 0.4;
-}
+import {
+  DEFAULT_DIET_PREFERENCE,
+  type DietPreference,
+  loadDietPreferences,
+  scoreDishForPreferences,
+} from "../../services/dietPreferences";
 
 function sumMacros(items: api.Dish[]) {
   return items.reduce(
@@ -51,6 +51,13 @@ export default function RestaurantScreen() {
   const [menuQuery, setMenuQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [macrosOpen, setMacrosOpen] = useState(false);
+  const [prefs, setPrefs] = useState<DietPreference>(DEFAULT_DIET_PREFERENCE);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadDietPreferences().then(setPrefs);
+    }, [])
+  );
 
   useEffect(() => {
     if (!restaurantId) return;
@@ -67,8 +74,13 @@ export default function RestaurantScreen() {
   }, [restaurantId]);
 
   const bestForMe = useMemo(() => {
-    return [...dishes].sort((a, b) => bestScore(b) - bestScore(a)).slice(0, 10);
-  }, [dishes]);
+    return [...dishes]
+      .sort(
+        (a, b) =>
+          scoreDishForPreferences(b, prefs) - scoreDishForPreferences(a, prefs)
+      )
+      .slice(0, 10);
+  }, [dishes, prefs]);
 
   const tabList = activeTab === "best" ? bestForMe : dishes;
 
@@ -111,7 +123,7 @@ export default function RestaurantScreen() {
       <View style={styles.screen}>
         <Text style={styles.header}>{title}</Text>
         <Text style={styles.sub}>
-          Поиск по меню · несколько блюд · итого КБЖУ
+          Лучшее для меня — по сохранённым преференсам, калориям · поиск · несколько блюд · итого КБЖУ
         </Text>
 
         <View style={styles.tabs}>
