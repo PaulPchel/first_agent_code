@@ -1,5 +1,5 @@
 import { View, Text, Pressable, StyleSheet } from "react-native";
-import { colors } from "../constants/theme";
+import { colors, shadow } from "../constants/theme";
 
 interface Props {
   dishName: string;
@@ -37,16 +37,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: colors.surface,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
     paddingVertical: 14,
     paddingHorizontal: 14,
     marginBottom: 10,
+    ...shadow.soft,
   },
-  rowPressed: { opacity: 0.85 },
+  rowPressed: { opacity: 0.88 },
   textBlock: { flex: 1, paddingRight: 8 },
   name: { fontSize: 16, fontWeight: "600", color: colors.text },
-  meta: { marginTop: 4, fontSize: 13, color: colors.muted },
-  chevron: { fontSize: 28, fontWeight: "300", color: colors.accent, marginTop: -4 },
+  meta: { marginTop: 4, fontSize: 13, color: colors.calorie, fontWeight: "600" },
+  chevron: { fontSize: 24, fontWeight: "300", color: colors.muted, marginTop: -4 },
 });

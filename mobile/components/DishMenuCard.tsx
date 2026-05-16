@@ -1,5 +1,5 @@
 import { View, Text, Pressable, StyleSheet } from "react-native";
-import { colors } from "../constants/theme";
+import { colors, shadow } from "../constants/theme";
 
 type Props = {
   dishName: string;
@@ -63,33 +63,34 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: colors.surface,
     borderRadius: 16,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: colors.border,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
     marginBottom: 10,
+    ...shadow.soft,
   },
   cardSelected: {
     borderColor: colors.accent,
     backgroundColor: colors.accentSoft,
   },
-  checkHit: { marginRight: 10 },
+  checkHit: { marginRight: 12 },
   checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     borderWidth: 2,
-    borderColor: colors.muted,
+    borderColor: colors.border,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "transparent",
+    backgroundColor: colors.surface,
   },
   checkboxOn: {
-    borderColor: colors.accent,
-    backgroundColor: colors.accent,
+    borderColor: colors.checkOn,
+    backgroundColor: colors.checkOn,
   },
   checkMark: {
-    color: "#000",
+    color: "#FFFFFF",
     fontSize: 13,
     fontWeight: "900",
     marginTop: -1,
@@ -116,11 +117,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "700",
   },
-  chevHit: { paddingLeft: 6, paddingVertical: 4 },
+  chevHit: { paddingLeft: 8, paddingVertical: 4 },
   chevron: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: "300",
-    color: colors.accent,
+    color: colors.muted,
   },
   pressed: { opacity: 0.75 },
 });

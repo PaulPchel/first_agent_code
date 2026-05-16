@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { View, Text, TextInput, Pressable, ScrollView, StyleSheet } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import * as api from "../services/api";
-import { colors } from "../constants/theme";
+import { colors, shadow } from "../constants/theme";
 
 function paramString(v: string | string[] | undefined): string {
   if (v == null) return "";
@@ -68,7 +68,7 @@ export default function RestaurantsScreen() {
           placeholderTextColor={colors.muted}
         />
 
-        <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
+        <ScrollView style={styles.list} contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
           {restaurants.length === 0 ? (
             <Text style={styles.empty}>Рестораны не найдены</Text>
           ) : (
@@ -104,32 +104,41 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: colors.inputBg,
     color: colors.text,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     fontSize: 16,
-    marginBottom: 10,
-  },
-  list: {
-    flex: 1,
-    backgroundColor: colors.inputBg,
-    borderRadius: 12,
+    marginBottom: 14,
     borderWidth: 1,
     borderColor: colors.border,
+    ...shadow.soft,
   },
-  listContent: { paddingVertical: 2 },
-  item: { paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
-  itemActive: { backgroundColor: colors.accentSoft },
-  itemText: { color: colors.text, fontSize: 16 },
-  itemTextActive: { color: colors.accent, fontWeight: "700" },
-  empty: { color: colors.muted, textAlign: "center", padding: 20 },
+  list: { flex: 1 },
+  listContent: { gap: 10, paddingBottom: 12 },
+  item: {
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderRadius: 16,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadow.soft,
+  },
+  itemActive: {
+    backgroundColor: colors.accentSoft,
+    borderColor: colors.accent,
+  },
+  itemText: { color: colors.text, fontSize: 16, fontWeight: "600" },
+  itemTextActive: { color: colors.accentMuted, fontWeight: "700" },
+  empty: { color: colors.muted, textAlign: "center", padding: 24 },
   primaryBtn: {
     marginTop: 14,
     backgroundColor: colors.accent,
-    borderRadius: 12,
-    paddingVertical: 13,
+    borderRadius: 16,
+    paddingVertical: 15,
     alignItems: "center",
+    ...shadow.soft,
   },
-  primaryBtnText: { color: "#000", fontWeight: "700", fontSize: 16 },
+  primaryBtnText: { color: "#FFFFFF", fontWeight: "800", fontSize: 16 },
   disabled: { opacity: 0.45 },
 });

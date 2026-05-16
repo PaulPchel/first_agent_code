@@ -12,7 +12,7 @@ import {
 import Slider from "@react-native-community/slider";
 import Svg, { Path } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors } from "../constants/theme";
+import { colors, shadow } from "../constants/theme";
 import {
   type DietPreference,
   CALORIE_STEPS,
@@ -157,7 +157,7 @@ export function DietPreferenceModal({ visible, onClose }: Props) {
             <Text style={styles.headerTitle}>Предпочтения</Text>
             <Text style={styles.headerSub}>Рекомендации</Text>
           </View>
-          <Pressable onPress={onClose} hitSlop={12} accessibilityLabel="Закрыть">
+          <Pressable onPress={onClose} hitSlop={12} accessibilityLabel="Закрыть" style={styles.closeBtn}>
             <Text style={styles.close}>✕</Text>
           </Pressable>
         </View>
@@ -168,19 +168,21 @@ export function DietPreferenceModal({ visible, onClose }: Props) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.arcWrap}>
-            <CalorieArc ratio={calRatio} size={220} />
-            <View style={styles.calOverlay}>
-              <View style={styles.calRow}>
-                <Pressable style={styles.stepBtn} {...bindCalHold(-1)} accessibilityLabel="Меньше калорий">
-                  <Text style={styles.stepTxt}>−</Text>
-                </Pressable>
-                <Text style={styles.calBig}>{draft.targetCalories}</Text>
-                <Pressable style={styles.stepBtn} {...bindCalHold(1)} accessibilityLabel="Больше калорий">
-                  <Text style={styles.stepTxt}>+</Text>
-                </Pressable>
+          <View style={styles.arcCard}>
+            <View style={styles.arcWrap}>
+              <CalorieArc ratio={calRatio} size={220} />
+              <View style={styles.calOverlay}>
+                <View style={styles.calRow}>
+                  <Pressable style={styles.stepBtn} {...bindCalHold(-1)} accessibilityLabel="Меньше калорий">
+                    <Text style={styles.stepTxt}>−</Text>
+                  </Pressable>
+                  <Text style={styles.calBig}>{draft.targetCalories}</Text>
+                  <Pressable style={styles.stepBtn} {...bindCalHold(1)} accessibilityLabel="Больше калорий">
+                    <Text style={styles.stepTxt}>+</Text>
+                  </Pressable>
+                </View>
+                <Text style={styles.calLabel}>Ккал на приём пищи</Text>
               </View>
-              <Text style={styles.calLabel}>Ккал на приём пищи</Text>
             </View>
           </View>
 
@@ -202,22 +204,25 @@ export function DietPreferenceModal({ visible, onClose }: Props) {
 
           <MacroSlider
             label="Белки"
-            color="#42a5f5"
+            color={colors.protein}
             value={draft.proteinG}
+            valueColor={colors.protein}
             onChange={(v) =>
               setDraft((p) => syncCaloriesWithMacrosAfterMacroEdit({ ...p, proteinG: v }))
             }
           />
           <MacroSlider
             label="Углеводы"
-            color="#ff9800"
+            color={colors.carb}
             value={draft.carbG}
+            valueColor={colors.carb}
             onChange={(v) => setDraft((p) => syncCaloriesWithMacrosAfterMacroEdit({ ...p, carbG: v }))}
           />
           <MacroSlider
             label="Жиры"
-            color="#66bb6a"
+            color={colors.fat}
             value={draft.fatG}
+            valueColor={colors.fat}
             onChange={(v) => setDraft((p) => syncCaloriesWithMacrosAfterMacroEdit({ ...p, fatG: v }))}
           />
         </ScrollView>
@@ -238,11 +243,13 @@ export function DietPreferenceModal({ visible, onClose }: Props) {
 function MacroSlider({
   label,
   color,
+  valueColor,
   value,
   onChange,
 }: {
   label: string;
   color: string;
+  valueColor: string;
   value: number;
   onChange: (v: number) => void;
 }) {
@@ -250,7 +257,7 @@ function MacroSlider({
     <View style={styles.macroBlock}>
       <View style={styles.macroTop}>
         <Text style={styles.macroLabel}>{label}</Text>
-        <Text style={styles.macroVal}>{Math.round(value)} г</Text>
+        <Text style={[styles.macroVal, { color: valueColor }]}>{Math.round(value)} г</Text>
       </View>
       <Slider
         style={styles.slider}
@@ -272,14 +279,35 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     justifyContent: "space-between",
-    paddingHorizontal: 18,
-    paddingBottom: 8,
+    paddingHorizontal: 20,
+    paddingBottom: 12,
   },
-  headerTitle: { color: colors.text, fontSize: 22, fontWeight: "800" },
-  headerSub: { color: colors.muted, marginTop: 4, fontSize: 13 },
-  close: { color: colors.muted, fontSize: 22, padding: 4 },
-  scroll: { flex: 1, paddingHorizontal: 18 },
-  arcWrap: { alignItems: "center", marginBottom: 8, marginTop: 4 },
+  headerTitle: { color: colors.text, fontSize: 24, fontWeight: "800" },
+  headerSub: { color: colors.textSecondary, marginTop: 4, fontSize: 13 },
+  closeBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+    ...shadow.soft,
+  },
+  close: { color: colors.muted, fontSize: 18, fontWeight: "600" },
+  scroll: { flex: 1, paddingHorizontal: 20 },
+  arcCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    marginBottom: 16,
+    ...shadow.card,
+  },
+  arcWrap: { alignItems: "center" },
   calOverlay: {
     position: "absolute",
     top: 36,
@@ -291,11 +319,12 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: colors.surface2,
+    backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
     borderColor: colors.border,
+    ...shadow.soft,
   },
   stepTxt: {
     color: colors.text,
@@ -306,46 +335,47 @@ const styles = StyleSheet.create({
     ...(Platform.OS === "android" ? { includeFontPadding: false } : {}),
   },
   calBig: { color: colors.text, fontSize: 40, fontWeight: "800", minWidth: 120, textAlign: "center" },
-  calLabel: { color: colors.muted, marginTop: 8, fontSize: 13 },
-  stepHint: { color: colors.muted, fontSize: 12, marginBottom: 8 },
+  calLabel: { color: colors.textSecondary, marginTop: 8, fontSize: 13 },
+  stepHint: { color: colors.muted, fontSize: 12, marginBottom: 10 },
   stepChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 20,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     marginRight: 8,
+    ...shadow.soft,
   },
   stepChipActive: {
     backgroundColor: colors.accentSoft,
     borderColor: colors.accent,
   },
-  stepChipText: { color: colors.text, fontWeight: "700", fontSize: 14 },
-  stepChipTextActive: { color: colors.accent },
-  macroBlock: { marginBottom: 18 },
+  stepChipText: { color: colors.textSecondary, fontWeight: "600", fontSize: 14 },
+  stepChipTextActive: { color: colors.accentMuted, fontWeight: "700" },
+  macroBlock: { marginBottom: 20 },
   macroTop: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 6,
+    marginBottom: 8,
   },
   macroLabel: { color: colors.text, fontWeight: "700", fontSize: 15 },
-  macroVal: { color: colors.text, fontWeight: "700", fontSize: 15 },
+  macroVal: { fontWeight: "700", fontSize: 15 },
   slider: { width: "100%", height: 40 },
-  chipsScroll: { marginBottom: 8 },
+  chipsScroll: { marginBottom: 12 },
   footer: {
     flexDirection: "row",
     gap: 10,
-    paddingHorizontal: 18,
-    paddingTop: 10,
+    paddingHorizontal: 20,
+    paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: colors.border,
-    backgroundColor: colors.bg,
+    backgroundColor: colors.surface,
   },
   resetBtn: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 14,
+    paddingVertical: 15,
+    borderRadius: 16,
     backgroundColor: colors.surface2,
     alignItems: "center",
     borderWidth: 1,
@@ -354,10 +384,11 @@ const styles = StyleSheet.create({
   resetTxt: { color: colors.text, fontWeight: "700", fontSize: 15 },
   applyBtn: {
     flex: 2,
-    paddingVertical: 14,
-    borderRadius: 14,
-    backgroundColor: "#2e7d32",
+    paddingVertical: 15,
+    borderRadius: 16,
+    backgroundColor: colors.accent,
     alignItems: "center",
+    ...shadow.soft,
   },
-  applyTxt: { color: "#fff", fontWeight: "800", fontSize: 15 },
+  applyTxt: { color: "#FFFFFF", fontWeight: "800", fontSize: 15 },
 });

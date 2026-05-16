@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors } from "../../../../constants/theme";
+import { colors, shadow } from "../../../../constants/theme";
 import * as api from "../../../../services/api";
 import { DishCard } from "../../../../components/DishCard";
 import { getUserId } from "../../../../services/userId";
@@ -158,10 +158,10 @@ const styles = StyleSheet.create({
   },
   muted: { color: colors.muted, fontSize: 16 },
   linkBtn: { marginTop: 16, padding: 12 },
-  linkBtnText: { color: colors.accent, fontWeight: "600", fontSize: 16 },
+  linkBtnText: { color: colors.accentMuted, fontWeight: "700", fontSize: 16 },
   scroll: { paddingHorizontal: 16, paddingTop: 8 },
   kicker: {
-    color: colors.accent,
+    color: colors.accentMuted,
     fontSize: 12,
     fontWeight: "700",
     letterSpacing: 1,
@@ -170,20 +170,21 @@ const styles = StyleSheet.create({
   },
   screenTitle: {
     color: colors.text,
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: "800",
     letterSpacing: -0.5,
     marginBottom: 4,
   },
-  restaurant: { color: colors.muted, fontSize: 15, marginBottom: 16 },
+  restaurant: { color: colors.textSecondary, fontSize: 15, marginBottom: 16 },
   cardFlat: { marginBottom: 8 },
   hintBox: {
     marginTop: 8,
-    backgroundColor: colors.surface2,
-    borderRadius: 14,
+    backgroundColor: colors.surface,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
     padding: 16,
+    ...shadow.soft,
   },
   hintTitle: { color: colors.text, fontWeight: "700", marginBottom: 8, fontSize: 15 },
   hintText: { color: colors.textSecondary, fontSize: 14, lineHeight: 20 },
@@ -200,10 +201,11 @@ const styles = StyleSheet.create({
   },
   primaryBtn: {
     backgroundColor: colors.accent,
-    borderRadius: 14,
-    paddingVertical: 15,
+    borderRadius: 16,
+    paddingVertical: 16,
     alignItems: "center",
+    ...shadow.soft,
   },
   primaryBtnDisabled: { opacity: 0.55 },
-  primaryBtnText: { color: "#000", fontWeight: "800", fontSize: 16 },
+  primaryBtnText: { color: "#FFFFFF", fontWeight: "800", fontSize: 16 },
 });
