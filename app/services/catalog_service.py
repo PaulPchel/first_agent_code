@@ -1,4 +1,4 @@
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app.db.models import Dish, Restaurant
@@ -17,6 +17,15 @@ class CatalogService:
 
     def get_restaurant(self, restaurant_id: int):
         return self.db.query(Restaurant).filter(Restaurant.id == restaurant_id).first()
+
+    def avg_calories_by_restaurant(self) -> dict[int, float]:
+        rows = (
+            self.db.query(Dish.restaurant_id, func.avg(Dish.calories))
+            .filter(Dish.calories.isnot(None))
+            .group_by(Dish.restaurant_id)
+            .all()
+        )
+        return {int(rid): round(float(avg), 0) for rid, avg in rows}
 
     def list_dishes(self, restaurant_id: int, query: str | None = None, limit: int = 100):
         q = self.db.query(Dish).filter(Dish.restaurant_id == restaurant_id)
