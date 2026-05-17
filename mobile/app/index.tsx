@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -9,11 +9,17 @@ import {
   Dimensions,
 } from "react-native";
 import { Stack, useRouter } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 import * as api from "../services/api";
 import { useUserLocation } from "../services/location";
 import { colors, shadow } from "../constants/theme";
-import { DietPreferenceIcon } from "../components/DietPreferenceIcon";
 import { DietPreferenceModal } from "../components/DietPreferenceModal";
+import { TodayCaloriesCard } from "../components/TodayCaloriesCard";
+import {
+  DEFAULT_DIET_PREFERENCE,
+  type DietPreference,
+  loadDietPreferences,
+} from "../services/dietPreferences";
 
 const CARD_GAP = 10;
 const CARD_COLUMNS = 3;
@@ -28,6 +34,21 @@ function formatDistance(km?: number | null): string {
   return `${km.toFixed(1)} km`;
 }
 
+function formatTodayDate(): string {
+  return new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+function greeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 18) return "Good afternoon";
+  return "Good evening";
+}
+
 export default function HomeScreen() {
   const router = useRouter();
   const { location } = useUserLocation();
@@ -35,6 +56,18 @@ export default function HomeScreen() {
   const [restaurants, setRestaurants] = useState<api.Restaurant[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [prefsOpen, setPrefsOpen] = useState(false);
+  const [prefs, setPrefs] = useState<DietPreference>({ ...DEFAULT_DIET_PREFERENCE });
+
+  const loadPrefs = useCallback(async () => {
+    const loaded = await loadDietPreferences();
+    setPrefs(loaded);
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadPrefs();
+    }, [loadPrefs])
+  );
 
   useEffect(() => {
     void loadRestaurants("");
@@ -67,31 +100,27 @@ export default function HomeScreen() {
     });
   }
 
+  function closePrefsModal() {
+    setPrefsOpen(false);
+    void loadPrefs();
+  }
+
   const nearby = query.trim() ? restaurants : restaurants.slice(0, 6);
 
   return (
     <>
-      <Stack.Screen
-        options={{
-          title: "Главная",
-          headerRight: () => (
-            <Pressable
-              onPress={() => setPrefsOpen(true)}
-              hitSlop={12}
-              style={styles.headerIconBtn}
-              accessibilityLabel="Diet preferences"
-            >
-              <DietPreferenceIcon />
-            </Pressable>
-          ),
-        }}
-      />
+      <Stack.Screen options={{ title: "Главная", headerShown: false }} />
       <ScrollView
         style={styles.screen}
         contentContainerStyle={styles.screenContent}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>Что хочешь поесть?</Text>
+        <View style={styles.topRow}>
+          <Text style={styles.dateLine}>{formatTodayDate()}</Text>
+          <Text style={styles.greeting}>{greeting()}!</Text>
+        </View>
+
+        <TodayCaloriesCard prefs={prefs} eatenCalories={0} onPressDetails={() => setPrefsOpen(true)} />
 
         <TextInput
           style={styles.input}
@@ -131,9 +160,7 @@ export default function HomeScreen() {
                   {r.name}
                 </Text>
                 {r.distance_km != null && (
-                  <Text style={styles.cardDistance}>
-                    📍 {formatDistance(r.distance_km)}
-                  </Text>
+                  <Text style={styles.cardDistance}>📍 {formatDistance(r.distance_km)}</Text>
                 )}
               </Pressable>
             ))}
@@ -141,20 +168,27 @@ export default function HomeScreen() {
         )}
       </ScrollView>
 
-      <DietPreferenceModal visible={prefsOpen} onClose={() => setPrefsOpen(false)} />
+      <DietPreferenceModal visible={prefsOpen} onClose={closePrefsModal} />
     </>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  screenContent: { padding: SCREEN_PADDING, paddingBottom: 40 },
-  title: {
+  screenContent: { padding: SCREEN_PADDING, paddingTop: 56, paddingBottom: 40 },
+  topRow: {
+    marginBottom: 18,
+  },
+  dateLine: {
+    color: colors.muted,
+    fontSize: 13,
+    fontWeight: "500",
+    marginBottom: 4,
+  },
+  greeting: {
     color: colors.text,
     fontSize: 26,
     fontWeight: "800",
-    marginTop: 4,
-    marginBottom: 16,
   },
   input: {
     backgroundColor: colors.inputBg,
@@ -219,17 +253,5 @@ const styles = StyleSheet.create({
     textAlign: "center",
     padding: 24,
     fontSize: 14,
-  },
-  headerIconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 8,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-    ...shadow.soft,
   },
 });
