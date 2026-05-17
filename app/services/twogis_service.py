@@ -17,6 +17,7 @@ class TwoGisPlaceInfo:
     latitude: float
     longitude: float
     rating: float | None
+    address: str | None
 
 
 def _get_api_key() -> str:
@@ -31,7 +32,7 @@ def lookup_place(name: str, address: str | None = None) -> TwoGisPlaceInfo | Non
 
     Returns precise coordinates and rating, or None if no match found.
     """
-    query = f"{name} {address}" if address else name
+    query = f"{name} {address}" if address else f"{name} Москва"
 
     params = {
         "q": query,
@@ -67,10 +68,13 @@ def lookup_place(name: str, address: str | None = None) -> TwoGisPlaceInfo | Non
     if reviews and isinstance(reviews, dict):
         rating = reviews.get("rating")
 
+    address = item.get("address_name") or item.get("full_name")
+
     return TwoGisPlaceInfo(
         latitude=point["lat"],
         longitude=point["lon"],
         rating=float(rating) if rating is not None else None,
+        address=address,
     )
 
 
@@ -79,7 +83,7 @@ def sync_restaurant(db_session, restaurant) -> dict:
 
     Returns a status dict for logging/reporting.
     """
-    info = lookup_place(restaurant.name, restaurant.address)
+    info = lookup_place(restaurant.name)
 
     if info is None:
         return {"id": restaurant.id, "name": restaurant.name, "status": "not_found"}
@@ -88,6 +92,8 @@ def sync_restaurant(db_session, restaurant) -> dict:
     restaurant.longitude = info.longitude
     if info.rating is not None:
         restaurant.rating = info.rating
+    if info.address is not None:
+        restaurant.address = info.address
 
     return {
         "id": restaurant.id,
@@ -96,6 +102,7 @@ def sync_restaurant(db_session, restaurant) -> dict:
         "latitude": info.latitude,
         "longitude": info.longitude,
         "rating": info.rating,
+        "address": info.address,
     }
 
 

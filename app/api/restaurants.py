@@ -28,7 +28,12 @@ def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return EARTH_RADIUS_KM * 2 * math.asin(math.sqrt(a))
 
 
-def _restaurant_dict(r, user_lat: float | None = None, user_lon: float | None = None) -> dict:
+def _restaurant_dict(
+    r,
+    user_lat: float | None = None,
+    user_lon: float | None = None,
+    avg_cal: float | None = None,
+) -> dict:
     d: dict = {
         "id": r.id,
         "name": r.name,
@@ -38,6 +43,7 @@ def _restaurant_dict(r, user_lat: float | None = None, user_lon: float | None = 
         "emoji": r.emoji,
         "rating": r.rating,
         "distance_km": None,
+        "avg_calories": avg_cal,
     }
     if user_lat is not None and user_lon is not None and r.latitude and r.longitude:
         d["distance_km"] = round(haversine_km(user_lat, user_lon, r.latitude, r.longitude), 2)
@@ -54,7 +60,8 @@ def get_restaurants(
 ):
     service = CatalogService(db)
     items = service.list_restaurants(query=query, limit=limit)
-    results = [_restaurant_dict(r, lat, lon) for r in items]
+    avg_cals = service.avg_calories_by_restaurant()
+    results = [_restaurant_dict(r, lat, lon, avg_cals.get(r.id)) for r in items]
     if lat is not None and lon is not None:
         results.sort(key=lambda x: x["distance_km"] if x["distance_km"] is not None else float("inf"))
     return {"count": len(results), "results": results}

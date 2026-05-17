@@ -28,6 +28,7 @@ export interface Restaurant {
   emoji?: string | null;
   rating?: number | null;
   distance_km?: number | null;
+  avg_calories?: number | null;
 }
 
 export interface Dish {
