@@ -4,6 +4,12 @@ from pydantic import BaseModel
 class RestaurantOut(BaseModel):
     id: int
     name: str
+    latitude: float | None = None
+    longitude: float | None = None
+    address: str | None = None
+    emoji: str | None = None
+    rating: float | None = None
+    distance_km: float | None = None
 
 
 class DishOut(BaseModel):

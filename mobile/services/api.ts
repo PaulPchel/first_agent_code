@@ -22,6 +22,12 @@ export const API_BASE_URL = API_BASE;
 export interface Restaurant {
   id: number;
   name: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  address?: string | null;
+  emoji?: string | null;
+  rating?: number | null;
+  distance_km?: number | null;
 }
 
 export interface Dish {
@@ -47,13 +53,37 @@ export interface NutritionResult {
 }
 
 export async function fetchRestaurants(
-  query?: string
+  query?: string,
+  lat?: number,
+  lon?: number,
 ): Promise<{ results: Restaurant[] }> {
-  const url = query
-    ? `${API_BASE}/restaurants?query=${encodeURIComponent(query)}`
-    : `${API_BASE}/restaurants`;
+  const params = new URLSearchParams();
+  if (query) params.set("query", query);
+  if (lat != null && lon != null) {
+    params.set("lat", String(lat));
+    params.set("lon", String(lon));
+  }
+  const qs = params.toString();
+  const url = qs ? `${API_BASE}/restaurants?${qs}` : `${API_BASE}/restaurants`;
   const res = await fetch(url);
   if (!res.ok) throw new Error("Failed to load restaurants");
+  return res.json();
+}
+
+export async function fetchRestaurant(
+  id: number,
+  lat?: number,
+  lon?: number,
+): Promise<Restaurant> {
+  const params = new URLSearchParams();
+  if (lat != null && lon != null) {
+    params.set("lat", String(lat));
+    params.set("lon", String(lon));
+  }
+  const qs = params.toString();
+  const url = qs ? `${API_BASE}/restaurants/${id}?${qs}` : `${API_BASE}/restaurants/${id}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("Failed to load restaurant");
   return res.json();
 }
 

@@ -15,6 +15,9 @@ class CatalogService:
             q = q.filter(Restaurant.name.ilike(pattern))
         return q.order_by(Restaurant.name.asc()).limit(limit).all()
 
+    def get_restaurant(self, restaurant_id: int):
+        return self.db.query(Restaurant).filter(Restaurant.id == restaurant_id).first()
+
     def list_dishes(self, restaurant_id: int, query: str | None = None, limit: int = 100):
         q = self.db.query(Dish).filter(Dish.restaurant_id == restaurant_id)
         if query:
